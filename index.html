@@ -1282,6 +1282,320 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+    <!-- ========================================================================
+       MODAL 7: 📅 步驟引導式新增活動精靈 (Interactive Activity Creation Wizard)
+       支援多步驟導引、視覺化時鐘幾點幾分開始點選、活動類型點選與自行輸入
+       ======================================================================== -->
+  <div id="modal-create-activity-wizard" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 hidden">
+    <div class="bg-white w-full max-w-lg rounded-3xl border border-[#E8DFD3] shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      
+      <!-- 精靈頂部 Header -->
+      <div class="p-4 border-b border-[#E8DFD3] bg-[#FAF6ED] flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-2.5">
+          <span class="text-2xl p-1 bg-white rounded-xl shadow-2xs">📅</span>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="font-bold text-base text-[#2C241E]">新增活動與陪伴安排</h3>
+              <span id="wizard-active-recipient-pill" class="text-[11px] bg-brand-terracotta/10 text-brand-terracotta font-bold px-2 py-0.5 rounded-full border border-brand-terracotta/20 flex items-center space-x-1">
+                <span id="wizard-recipient-avatar">👵</span>
+                <span id="wizard-recipient-name">王奶奶</span>
+              </span>
+            </div>
+            <p id="wizard-step-hint" class="text-[11px] text-gray-500 mt-0.5">步驟 1 / 4：活動主題與類型</p>
+          </div>
+        </div>
+        <button id="btn-close-activity-wizard" class="p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- 步驟進度指示條 (Step Progress Indicator) -->
+      <div class="bg-white px-4 py-2 border-b border-[#E8DFD3] shrink-0">
+        <div class="flex items-center justify-between max-w-md mx-auto relative">
+          <div class="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-0.5 bg-gray-200 -z-0"></div>
+          <div id="wizard-progress-line" class="absolute left-4 top-1/2 -translate-y-1/2 h-0.5 bg-brand-terracotta transition-all duration-300 -z-0 w-0"></div>
+
+          <!-- 步驟 1 -->
+          <div class="wizard-step-node flex flex-col items-center relative z-10" data-step="1">
+            <div class="wizard-node-circle w-7 h-7 rounded-full bg-brand-terracotta text-white font-bold text-xs flex items-center justify-center transition shadow-2xs">1</div>
+            <span class="text-[10px] font-bold text-brand-terracotta mt-0.5">主題類型</span>
+          </div>
+
+          <!-- 步驟 2 -->
+          <div class="wizard-step-node flex flex-col items-center relative z-10" data-step="2">
+            <div class="wizard-node-circle w-7 h-7 rounded-full bg-gray-200 text-gray-500 font-bold text-xs flex items-center justify-center transition shadow-2xs">2</div>
+            <span class="text-[10px] font-bold text-gray-400 mt-0.5">時間時鐘</span>
+          </div>
+
+          <!-- 步驟 3 -->
+          <div class="wizard-step-node flex flex-col items-center relative z-10" data-step="3">
+            <div class="wizard-node-circle w-7 h-7 rounded-full bg-gray-200 text-gray-500 font-bold text-xs flex items-center justify-center transition shadow-2xs">3</div>
+            <span class="text-[10px] font-bold text-gray-400 mt-0.5">地點人員</span>
+          </div>
+
+          <!-- 步驟 4 -->
+          <div class="wizard-step-node flex flex-col items-center relative z-10" data-step="4">
+            <div class="wizard-node-circle w-7 h-7 rounded-full bg-gray-200 text-gray-500 font-bold text-xs flex items-center justify-center transition shadow-2xs">4</div>
+            <span class="text-[10px] font-bold text-gray-400 mt-0.5">確認建立</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 精靈內容主體 (Wizard Steps Body) -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4">
+
+        <!-- ==================== STEP 1: 活動名稱與類型 ==================== -->
+        <div id="wizard-step-1" class="wizard-step-content space-y-4">
+          <!-- 活動名稱輸入 -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold text-[#2C241E] flex items-center justify-between">
+              <span>✍️ 請輸入活動名稱 <span class="text-rose-500">*</span></span>
+              <span class="text-[10px] text-gray-400 font-normal">可直接輸入或點選下方靈感</span>
+            </label>
+            <input id="wizard-act-title" type="text" placeholder="例如：陪奶奶在客廳金萱品茗、小宇大自然彩葉拼貼..." class="w-full px-3.5 py-2.5 bg-[#FAF6ED] border border-[#D6C8B4] rounded-xl text-xs font-medium focus:outline-none focus:border-brand-terracotta focus:bg-white transition text-gray-800 shadow-2xs">
+            
+            <!-- 常用活動靈感標籤 (點選快速帶入) -->
+            <div class="space-y-1 pt-1">
+              <span class="text-[10px] text-gray-400 font-semibold">💡 常用靈感推薦 (點選填入)：</span>
+              <div id="wizard-title-suggestions" class="flex flex-wrap gap-1.5">
+                <!-- 動態注入依長輩或幼兒客製之標籤 -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 活動類型點選 -->
+          <div class="space-y-2 pt-2 border-t border-gray-100">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-[#2C241E] flex items-center space-x-1">
+                <span>🏷️ 活動類型 (點選決定) <span class="text-rose-500">*</span></span>
+              </label>
+              <span id="wizard-selected-category-badge" class="text-[10px] bg-brand-terracotta/10 text-brand-terracotta font-bold px-2 py-0.5 rounded-full">
+                已選：休閒・品茗
+              </span>
+            </div>
+
+            <!-- 推薦分類標籤列表 (點選切換) -->
+            <div id="wizard-category-chips" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <!-- 動態載入類別選項 -->
+            </div>
+
+            <!-- 自行輸入類型按鈕與展開框 -->
+            <div class="pt-1">
+              <button id="btn-wizard-custom-category-toggle" type="button" class="text-xs font-bold text-brand-terracotta hover:underline flex items-center space-x-1 transition">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                <span>清單沒有合適的？點此自行輸入類型...</span>
+              </button>
+
+              <div id="wizard-custom-category-box" class="hidden mt-2 p-2.5 bg-[#FAF6ED] rounded-xl border border-[#D6C8B4] space-y-1.5 animate-fadeIn">
+                <div class="flex items-center justify-between text-[11px] font-bold text-gray-700">
+                  <span>自訂活動類型名稱：</span>
+                  <button id="btn-wizard-custom-category-cancel" type="button" class="text-gray-400 hover:text-gray-600 text-[10px]">✕ 取消自訂</button>
+                </div>
+                <input id="wizard-custom-category-input" type="text" placeholder="例如：烘焙・手作、園藝・多肉植物、寵物・陪伴..." class="w-full px-3 py-1.5 bg-white border border-[#D6C8B4] rounded-lg text-xs focus:outline-none focus:border-brand-terracotta">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== STEP 2: 日期與時鐘時間設定 ==================== -->
+        <div id="wizard-step-2" class="wizard-step-content hidden space-y-4">
+          <!-- 日期選擇 -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold text-[#2C241E] flex items-center justify-between">
+              <span>📅 活動日期 (點選決定)</span>
+              <span id="wizard-selected-date-label" class="text-[11px] text-brand-terracotta font-bold">2026-09-12 (今天)</span>
+            </label>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button type="button" class="wizard-date-chip px-3 py-1.5 rounded-xl text-xs font-bold transition border border-[#D6C8B4] bg-brand-terracotta text-white shadow-2xs" data-date-offset="0">今天 (9/12)</button>
+              <button type="button" class="wizard-date-chip px-3 py-1.5 rounded-xl text-xs font-bold transition border border-[#D6C8B4] bg-[#FAF6ED] text-gray-700 hover:bg-[#F2E8DA]" data-date-offset="1">明天 (9/13)</button>
+              <button type="button" class="wizard-date-chip px-3 py-1.5 rounded-xl text-xs font-bold transition border border-[#D6C8B4] bg-[#FAF6ED] text-gray-700 hover:bg-[#F2E8DA]" data-date-offset="2">後天 (9/14)</button>
+              <button type="button" class="wizard-date-chip px-3 py-1.5 rounded-xl text-xs font-bold transition border border-[#D6C8B4] bg-[#FAF6ED] text-gray-700 hover:bg-[#F2E8DA]" data-date-offset="3">週日 (9/15)</button>
+              <div class="flex items-center space-x-1 ml-auto">
+                <span class="text-[10px] text-gray-400">自選：</span>
+                <input id="wizard-date-picker" type="date" value="2026-09-12" class="px-2 py-1 bg-white border border-[#D6C8B4] rounded-lg text-xs font-semibold text-gray-800">
+              </div>
+            </div>
+          </div>
+
+          <!-- 視覺化時鐘與時間綜合區塊 -->
+          <div class="bg-gradient-to-br from-[#FFFBF2] to-[#FAF3E8] p-3.5 rounded-2xl border border-[#E8D7C2] shadow-xs space-y-3">
+            <!-- 頂部：即時時間區間計算徽章 -->
+            <div class="flex items-center justify-between border-b border-[#E8D7C2]/70 pb-2.5">
+              <div>
+                <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">即時排程運算</span>
+                <div class="flex items-center space-x-1.5 mt-0.5">
+                  <span class="text-xl font-mono font-bold text-brand-terracotta" id="wizard-clock-time-display">15:00</span>
+                  <span class="text-xs text-gray-500 font-semibold" id="wizard-clock-duration-display">(預計 60 分鐘)</span>
+                </div>
+              </div>
+              <div id="wizard-time-summary-badge" class="bg-white/90 border border-[#D6C8B4] px-2.5 py-1 rounded-xl text-right shadow-2xs">
+                <span class="text-[10px] text-gray-400 block font-sans">時間段</span>
+                <span id="wizard-time-range-text" class="text-xs font-bold font-mono text-[#2C241E]">15:00–16:00</span>
+              </div>
+            </div>
+
+            <!-- 時鐘鐘面與時針分針 (Interactive Clock Display) -->
+            <div class="flex items-center justify-center space-x-4 py-1">
+              <div class="relative w-28 h-28 shrink-0 bg-white rounded-full shadow-inner border-3 border-[#C59B27] flex items-center justify-center">
+                <!-- 時鐘 SVG -->
+                <svg viewBox="0 0 100 100" class="w-full h-full">
+                  <!-- 鐘面刻度環 -->
+                  <circle cx="50" cy="50" r="46" fill="#FFFDF9" stroke="#E8DFD3" stroke-width="1.5"/>
+                  
+                  <!-- 12 小時刻度線與數字點 -->
+                  <circle cx="50" cy="8" r="2" fill="#8A5A2B"/>
+                  <circle cx="92" cy="50" r="2" fill="#8A5A2B"/>
+                  <circle cx="50" cy="92" r="2" fill="#8A5A2B"/>
+                  <circle cx="8" cy="50" r="2" fill="#8A5A2B"/>
+                  
+                  <text x="50" y="19" text-anchor="middle" font-size="8" font-family="sans-serif" font-weight="bold" fill="#786B61">12</text>
+                  <text x="83" y="53" text-anchor="middle" font-size="8" font-family="sans-serif" font-weight="bold" fill="#786B61">3</text>
+                  <text x="50" y="86" text-anchor="middle" font-size="8" font-family="sans-serif" font-weight="bold" fill="#786B61">6</text>
+                  <text x="17" y="53" text-anchor="middle" font-size="8" font-family="sans-serif" font-weight="bold" fill="#786B61">9</text>
+
+                  <!-- 時針 (Hour Hand) -->
+                  <line id="clock-hand-hour" x1="50" y1="50" x2="50" y2="27" stroke="#2C241E" stroke-width="3.5" stroke-linecap="round" transform="rotate(90 50 50)"/>
+                  
+                  <!-- 分針 (Minute Hand) -->
+                  <line id="clock-hand-minute" x1="50" y1="50" x2="50" y2="15" stroke="#D97736" stroke-width="2.2" stroke-linecap="round" transform="rotate(0 50 50)"/>
+                  
+                  <!-- 軸心圓點 -->
+                  <circle cx="50" cy="50" r="3" fill="#C59B27"/>
+                  <circle cx="50" cy="50" r="1.2" fill="#FFFFFF"/>
+                </svg>
+              </div>
+
+              <!-- 右側說明 -->
+              <div class="space-y-1 text-xs text-gray-600">
+                <div class="flex items-center space-x-1.5 font-bold text-[#2C241E]">
+                  <span class="w-2.5 h-2.5 rounded-full bg-brand-terracotta inline-block"></span>
+                  <span>橘針為分針 · 黑針為時針</span>
+                </div>
+                <p class="text-[11px] text-gray-500">點選下方幾點、幾分開始與預計時長，時鐘指針與活動區間將自動連動計算。</p>
+              </div>
+            </div>
+
+            <!-- 幾點開始 (小時點選) -->
+            <div class="space-y-1 pt-1">
+              <span class="text-[11px] font-bold text-[#2C241E] block">🕒 幾點開始 (小時快速點選)：</span>
+              <div id="wizard-hour-chips" class="grid grid-cols-6 gap-1.5">
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="8">08:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="9">09:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="10">10:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="11">11:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="14">14:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-brand-terracotta text-white border-brand-terracotta shadow-2xs active" data-hour="15">15:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="16">16:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="17">17:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="18">18:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="19">19:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="20">20:00</button>
+                <button type="button" class="wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-hour="21">21:00</button>
+              </div>
+            </div>
+
+            <!-- 幾分開始 (分鐘點選) -->
+            <div class="space-y-1">
+              <span class="text-[11px] font-bold text-[#2C241E] block">⏱️ 幾分開始 (分鐘快速點選)：</span>
+              <div id="wizard-minute-chips" class="grid grid-cols-4 gap-1.5">
+                <button type="button" class="wizard-minute-chip py-1 rounded-lg text-xs font-bold border transition bg-brand-terracotta text-white border-brand-terracotta shadow-2xs active" data-minute="0">00 分</button>
+                <button type="button" class="wizard-minute-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-minute="15">15 分</button>
+                <button type="button" class="wizard-minute-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-minute="30">30 分</button>
+                <button type="button" class="wizard-minute-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-minute="45">45 分</button>
+              </div>
+            </div>
+
+            <!-- 預計時長 (Duration) -->
+            <div class="space-y-1">
+              <span class="text-[11px] font-bold text-[#2C241E] block">⏳ 預計陪伴時長：</span>
+              <div id="wizard-duration-chips" class="grid grid-cols-5 gap-1.5">
+                <button type="button" class="wizard-duration-chip py-1 rounded-lg text-[11px] font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-duration="30">30 分鐘</button>
+                <button type="button" class="wizard-duration-chip py-1 rounded-lg text-[11px] font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-duration="45">45 分鐘</button>
+                <button type="button" class="wizard-duration-chip py-1 rounded-lg text-[11px] font-bold border transition bg-brand-terracotta text-white border-brand-terracotta shadow-2xs active" data-duration="60">1 小時</button>
+                <button type="button" class="wizard-duration-chip py-1 rounded-lg text-[11px] font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-duration="90">1.5 小時</button>
+                <button type="button" class="wizard-duration-chip py-1 rounded-lg text-[11px] font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]" data-duration="120">2 小時</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ==================== STEP 3: 地點與陪伴責任人 ==================== -->
+        <div id="wizard-step-3" class="wizard-step-content hidden space-y-4">
+          <!-- 地點點選 -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold text-[#2C241E] flex items-center justify-between">
+              <span>📍 活動地點 (點選或自訂)</span>
+              <span id="wizard-selected-location-badge" class="text-[10px] bg-brand-terracotta/10 text-brand-terracotta font-bold px-2 py-0.5 rounded-full">客廳陽台</span>
+            </label>
+            <div id="wizard-location-chips" class="flex flex-wrap gap-1.5">
+              <!-- 動態載入地點選項 -->
+            </div>
+            <input id="wizard-location-input" type="text" placeholder="或手動自訂其他地點..." class="w-full mt-1.5 px-3 py-1.5 bg-[#FAF6ED] border border-[#D6C8B4] rounded-xl text-xs focus:outline-none focus:border-brand-terracotta">
+          </div>
+
+          <!-- 陪伴責任人點選 -->
+          <div class="space-y-1.5 pt-2 border-t border-gray-100">
+            <label class="block text-xs font-bold text-[#2C241E] flex items-center justify-between">
+              <span>👤 陪伴責任人 (點選決定)</span>
+              <span id="wizard-selected-companion-badge" class="text-[10px] bg-brand-sage/10 text-brand-sage font-bold px-2 py-0.5 rounded-full">女兒 王小敏</span>
+            </label>
+            <div id="wizard-companion-chips" class="flex flex-wrap gap-1.5">
+              <!-- 動態載入陪伴人選項 -->
+            </div>
+            <input id="wizard-companion-input" type="text" placeholder="或自行輸入陪同人員..." class="w-full mt-1.5 px-3 py-1.5 bg-[#FAF6ED] border border-[#D6C8B4] rounded-xl text-xs focus:outline-none focus:border-brand-terracotta">
+          </div>
+
+          <!-- 隨筆或叮嚀事項 (選填) -->
+          <div class="space-y-1.5 pt-2 border-t border-gray-100">
+            <label class="block text-xs font-bold text-[#2C241E]">
+              📝 備註與貼心叮嚀 (選填)
+            </label>
+            <div id="wizard-notes-chips" class="flex flex-wrap gap-1.5 pb-1">
+              <button type="button" class="wizard-note-chip text-[11px] bg-white hover:bg-[#FAF6ED] border border-[#D6C8B4] px-2 py-0.5 rounded-lg text-gray-600 transition">+ 記得攜帶溫水壺</button>
+              <button type="button" class="wizard-note-chip text-[11px] bg-white hover:bg-[#FAF6ED] border border-[#D6C8B4] px-2 py-0.5 rounded-lg text-gray-600 transition">+ 散步請放慢步伐</button>
+              <button type="button" class="wizard-note-chip text-[11px] bg-white hover:bg-[#FAF6ED] border border-[#D6C8B4] px-2 py-0.5 rounded-lg text-gray-600 transition">+ 外出戴遮陽帽保暖</button>
+              <button type="button" class="wizard-note-chip text-[11px] bg-white hover:bg-[#FAF6ED] border border-[#D6C8B4] px-2 py-0.5 rounded-lg text-gray-600 transition">+ 記得按時補充用藥</button>
+            </div>
+            <textarea id="wizard-notes-input" rows="2" placeholder="輸入備註或特別叮嚀..." class="w-full px-3 py-2 bg-[#FAF6ED] border border-[#D6C8B4] rounded-xl text-xs focus:outline-none focus:border-brand-terracotta"></textarea>
+          </div>
+        </div>
+
+        <!-- ==================== STEP 4: 確認資訊與一鍵建立 ==================== -->
+        <div id="wizard-step-4" class="wizard-step-content hidden space-y-4">
+          <div class="text-center space-y-1">
+            <span class="text-3xl">🎉</span>
+            <h4 class="font-bold text-base text-[#2C241E]">活動排程即將建立</h4>
+            <p class="text-xs text-gray-500">請核對以下資訊，建立後將同步排入專屬行程與總覽看板</p>
+          </div>
+
+          <!-- 確認卡片 (Summary Card) -->
+          <div id="wizard-summary-card" class="bg-gradient-to-br from-[#FAF6ED] to-[#F3ECE0] rounded-2xl p-4 border border-[#E5D2BA] shadow-xs space-y-3">
+            <!-- 內容動態填充 -->
+          </div>
+
+          <!-- 說明 -->
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-800 flex items-start space-x-2">
+            <span class="text-base shrink-0">🌸</span>
+            <span>活動開始並陪伴完成後，只要上傳一張隨筆或照片，系統便能自動解鎖專屬的 3D 美式花語生活圖鑑卡！</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 精靈底部按鈕導覽列 (Wizard Footer Navigation) -->
+      <div class="p-4 border-t border-[#E8DFD3] bg-white flex items-center justify-between shrink-0 space-x-3">
+        <button id="btn-wizard-prev" type="button" class="px-4 py-2.5 bg-white border border-[#D6C8B4] hover:bg-gray-50 text-gray-700 font-bold rounded-xl text-xs transition shadow-2xs">
+          取消
+        </button>
+        <button id="btn-wizard-next" type="button" class="flex-1 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta-dark text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center justify-center space-x-1.5">
+          <span id="btn-wizard-next-text">下一步：設定時間與時鐘</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </div>
 
     </div>
   </div>

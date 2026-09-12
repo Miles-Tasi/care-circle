@@ -1786,6 +1786,23 @@ class CareCircleApp {
     this.currentKanbanFilter = 'ALL'; // 'ALL' | 'FAMILY' | 'CAREGIVER'
     this.currentActivityFilter = 'ALL'; // 'ALL' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'
 
+    // 新增活動步驟精靈暫存狀態
+    this.wizardCurrentStep = 1;
+    this.wizardData = {
+      title: '',
+      category: '休閒・品茗',
+      isCustomCategory: false,
+      customCategory: '',
+      date: '2026-09-12',
+      dateLabel: '2026-09-12 (今天)',
+      hour: 15,
+      minute: 0,
+      duration: 60,
+      location: '客廳陽台',
+      companion: '女兒 王小敏',
+      notes: ''
+    };
+
     this.initElements();
     this.bindEvents();
     this.renderAll();
@@ -1855,6 +1872,57 @@ class CareCircleApp {
     this.activityTabSubtitle = document.getElementById('activity-tab-subtitle');
     this.activityBadgeAvatar = document.getElementById('activity-badge-avatar');
     this.activityBadgeName = document.getElementById('activity-badge-name');
+
+    // 新增活動步驟精靈 Elements
+    this.modalCreateActivityWizard = document.getElementById('modal-create-activity-wizard');
+    this.btnCloseActivityWizard = document.getElementById('btn-close-activity-wizard');
+    this.wizardActiveRecipientPill = document.getElementById('wizard-active-recipient-pill');
+    this.wizardRecipientAvatar = document.getElementById('wizard-recipient-avatar');
+    this.wizardRecipientName = document.getElementById('wizard-recipient-name');
+    this.wizardStepHint = document.getElementById('wizard-step-hint');
+    this.wizardProgressLine = document.getElementById('wizard-progress-line');
+    this.wizardStepNodes = document.querySelectorAll('.wizard-step-node');
+    this.wizardStepContents = document.querySelectorAll('.wizard-step-content');
+
+    this.wizardStep1 = document.getElementById('wizard-step-1');
+    this.wizardStep2 = document.getElementById('wizard-step-2');
+    this.wizardStep3 = document.getElementById('wizard-step-3');
+    this.wizardStep4 = document.getElementById('wizard-step-4');
+
+    this.wizardActTitle = document.getElementById('wizard-act-title');
+    this.wizardTitleSuggestions = document.getElementById('wizard-title-suggestions');
+    this.wizardCategoryChips = document.getElementById('wizard-category-chips');
+    this.wizardSelectedCategoryBadge = document.getElementById('wizard-selected-category-badge');
+    this.btnWizardCustomCategoryToggle = document.getElementById('btn-wizard-custom-category-toggle');
+    this.wizardCustomCategoryBox = document.getElementById('wizard-custom-category-box');
+    this.wizardCustomCategoryInput = document.getElementById('wizard-custom-category-input');
+    this.btnWizardCustomCategoryCancel = document.getElementById('btn-wizard-custom-category-cancel');
+
+    this.wizardDateChips = document.querySelectorAll('.wizard-date-chip');
+    this.wizardDatePicker = document.getElementById('wizard-date-picker');
+    this.wizardSelectedDateLabel = document.getElementById('wizard-selected-date-label');
+    this.wizardClockTimeDisplay = document.getElementById('wizard-clock-time-display');
+    this.wizardClockDurationDisplay = document.getElementById('wizard-clock-duration-display');
+    this.wizardTimeRangeText = document.getElementById('wizard-time-range-text');
+    this.clockHandHour = document.getElementById('clock-hand-hour');
+    this.clockHandMinute = document.getElementById('clock-hand-minute');
+    this.wizardHourChips = document.querySelectorAll('.wizard-hour-chip');
+    this.wizardMinuteChips = document.querySelectorAll('.wizard-minute-chip');
+    this.wizardDurationChips = document.querySelectorAll('.wizard-duration-chip');
+
+    this.wizardLocationChips = document.getElementById('wizard-location-chips');
+    this.wizardSelectedLocationBadge = document.getElementById('wizard-selected-location-badge');
+    this.wizardLocationInput = document.getElementById('wizard-location-input');
+    this.wizardCompanionChips = document.getElementById('wizard-companion-chips');
+    this.wizardSelectedCompanionBadge = document.getElementById('wizard-selected-companion-badge');
+    this.wizardCompanionInput = document.getElementById('wizard-companion-input');
+    this.wizardNotesChips = document.querySelectorAll('.wizard-note-chip');
+    this.wizardNotesInput = document.getElementById('wizard-notes-input');
+
+    this.wizardSummaryCard = document.getElementById('wizard-summary-card');
+    this.btnWizardPrev = document.getElementById('btn-wizard-prev');
+    this.btnWizardNext = document.getElementById('btn-wizard-next');
+    this.btnWizardNextText = document.getElementById('btn-wizard-next-text');
 
     // 圖鑑 Tab Elements
     this.btnSubtabCards = document.getElementById('btn-subtab-cards');
@@ -2106,10 +2174,11 @@ class CareCircleApp {
       });
     });
 
-    // 新增活動手動彈窗
-    this.btnCreateActivityOpen.addEventListener('click', () => {
-      this.promptCreateActivity();
+    // 新增活動精靈視窗 (步驟引導式，含視覺化時鐘與類別點選)
+    this.btnCreateActivityOpen?.addEventListener('click', () => {
+      this.openCreateActivityWizard();
     });
+    this.bindActivityWizardEvents();
 
     // 圖鑑 Sub-tab 切換 (Cards vs Memory Book)
     this.btnSubtabCards.addEventListener('click', () => {
@@ -2948,7 +3017,7 @@ class CareCircleApp {
           </button>
         </div>
       `;
-      document.getElementById('btn-empty-add-act')?.addEventListener('click', () => this.promptCreateActivity());
+      document.getElementById('btn-empty-add-act')?.addEventListener('click', () => this.openCreateActivityWizard());
       return;
     }
 
@@ -3866,26 +3935,680 @@ class CareCircleApp {
     this.showToast(`已成功新增 ${type === 'CHILD' ? '幼兒' : '長輩'}【${name}】！全站已同步切換。`);
   }
 
-  promptCreateActivity() {
-    const rec = store.getActiveRecipient();
-    const title = prompt(`請輸入活動名稱：`, `陪${rec.name}散步喝下午茶`);
-    if (!title) return;
+  // ==========================================================================
+  // 13.5 📅 步驟引導式新增活動精靈 (Interactive Activity Creation Wizard)
+  // ==========================================================================
+  bindActivityWizardEvents() {
+    // 關閉精靈視窗
+    this.btnCloseActivityWizard?.addEventListener('click', () => this.closeCreateActivityWizard());
+    this.modalCreateActivityWizard?.addEventListener('click', (e) => {
+      if (e.target === this.modalCreateActivityWizard) {
+        this.closeCreateActivityWizard();
+      }
+    });
 
-    const category = prompt(`活動類型 (如: 戶外・散步 / 休閒・品茗 / 認知・益智)：`, '休閒・品茗') || '休閒・品茗';
-    const time = prompt(`時間段：`, '15:00–16:00') || '15:00–16:00';
-    const location = prompt(`地點：`, '客廳陽台') || '客廳陽台';
+    // 步驟切換按鈕 (上一步 / 取消)
+    this.btnWizardPrev?.addEventListener('click', () => {
+      if (this.wizardCurrentStep === 1) {
+        this.closeCreateActivityWizard();
+      } else {
+        this.setWizardStep(this.wizardCurrentStep - 1);
+      }
+    });
+
+    // 步驟切換按鈕 (下一步 / 確認建立)
+    this.btnWizardNext?.addEventListener('click', () => this.handleWizardNext());
+
+    // 步驟進度節點點選 (可直接跳回已走過的步驟)
+    this.wizardStepNodes?.forEach(node => {
+      node.addEventListener('click', () => {
+        const targetStep = parseInt(node.dataset.step, 10);
+        if (targetStep < this.wizardCurrentStep) {
+          this.setWizardStep(targetStep);
+        }
+      });
+    });
+
+    // 自行輸入活動類型開關與取消
+    this.btnWizardCustomCategoryToggle?.addEventListener('click', () => {
+      const isCurrentlyHidden = this.wizardCustomCategoryBox?.classList.contains('hidden');
+      if (isCurrentlyHidden) {
+        this.wizardCustomCategoryBox?.classList.remove('hidden');
+        this.wizardData.isCustomCategory = true;
+        this.wizardCategoryChips?.querySelectorAll('.wizard-category-chip').forEach(c => {
+          c.className = 'wizard-category-chip p-2.5 rounded-xl border text-left flex items-center space-x-2 transition bg-[#FAF6ED] text-gray-700 border-[#D6C8B4] hover:bg-[#F2E8DA] font-semibold';
+        });
+        this.wizardCustomCategoryInput?.focus();
+        if (this.wizardSelectedCategoryBadge) {
+          this.wizardSelectedCategoryBadge.textContent = '已選：自訂類型';
+        }
+      } else {
+        this.wizardCustomCategoryBox?.classList.add('hidden');
+        this.wizardData.isCustomCategory = false;
+        this.renderWizardStep1Options();
+      }
+    });
+
+    this.btnWizardCustomCategoryCancel?.addEventListener('click', () => {
+      this.wizardCustomCategoryBox?.classList.add('hidden');
+      this.wizardData.isCustomCategory = false;
+      if (this.wizardCustomCategoryInput) this.wizardCustomCategoryInput.value = '';
+      this.renderWizardStep1Options();
+    });
+
+    this.wizardCustomCategoryInput?.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      this.wizardData.customCategory = val;
+      if (this.wizardSelectedCategoryBadge) {
+        this.wizardSelectedCategoryBadge.textContent = '已選：' + (val || '自訂類型');
+      }
+    });
+
+    // 活動名稱即時輸入同步
+    this.wizardActTitle?.addEventListener('input', (e) => {
+      this.wizardData.title = e.target.value.trim();
+    });
+
+    // 日期晶片點選切換
+    const dateMap = {
+      '0': { date: '2026-09-12', label: '2026-09-12 (今天)' },
+      '1': { date: '2026-09-13', label: '2026-09-13 (明天)' },
+      '2': { date: '2026-09-14', label: '2026-09-14 (後天)' },
+      '3': { date: '2026-09-15', label: '2026-09-15 (週日)' }
+    };
+
+    this.wizardDateChips?.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const offset = chip.dataset.dateOffset;
+        const info = dateMap[offset];
+        if (!info) return;
+
+        this.wizardData.date = info.date;
+        this.wizardData.dateLabel = info.label;
+        if (this.wizardDatePicker) this.wizardDatePicker.value = info.date;
+        if (this.wizardSelectedDateLabel) this.wizardSelectedDateLabel.textContent = info.label;
+
+        this.wizardDateChips.forEach(c => {
+          c.className = 'wizard-date-chip px-3 py-1.5 rounded-xl text-xs font-bold transition border border-[#D6C8B4] bg-[#FAF6ED] text-gray-700 hover:bg-[#F2E8DA]';
+        });
+        chip.className = 'wizard-date-chip px-3 py-1.5 rounded-xl text-xs font-bold transition border border-brand-terracotta bg-brand-terracotta text-white shadow-2xs';
+      });
+    });
+
+    // 原生日期挑選器切換
+    this.wizardDatePicker?.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (!val) return;
+      this.wizardData.date = val;
+      this.wizardData.dateLabel = `${val} (自選)`;
+      if (this.wizardSelectedDateLabel) this.wizardSelectedDateLabel.textContent = this.wizardData.dateLabel;
+      this.wizardDateChips.forEach(c => {
+        c.className = 'wizard-date-chip px-3 py-1.5 rounded-xl text-xs font-bold transition border border-[#D6C8B4] bg-[#FAF6ED] text-gray-700 hover:bg-[#F2E8DA]';
+      });
+    });
+
+    // 小時快速點選
+    this.wizardHourChips?.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const hour = parseInt(chip.dataset.hour, 10);
+        this.wizardData.hour = hour;
+        this.wizardHourChips.forEach(c => {
+          c.className = 'wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]';
+        });
+        chip.className = 'wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-brand-terracotta text-white border-brand-terracotta shadow-2xs active';
+        this.updateClockHands(this.wizardData.hour, this.wizardData.minute);
+        this.updateTimeSummary();
+      });
+    });
+
+    // 分鐘快速點選
+    this.wizardMinuteChips?.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const min = parseInt(chip.dataset.minute, 10);
+        this.wizardData.minute = min;
+        this.wizardMinuteChips.forEach(c => {
+          c.className = 'wizard-minute-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]';
+        });
+        chip.className = 'wizard-minute-chip py-1 rounded-lg text-xs font-bold border transition bg-brand-terracotta text-white border-brand-terracotta shadow-2xs active';
+        this.updateClockHands(this.wizardData.hour, this.wizardData.minute);
+        this.updateTimeSummary();
+      });
+    });
+
+    // 預計時長快速點選
+    this.wizardDurationChips?.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const dur = parseInt(chip.dataset.duration, 10);
+        this.wizardData.duration = dur;
+        this.wizardDurationChips.forEach(c => {
+          c.className = 'wizard-duration-chip py-1 rounded-lg text-[11px] font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]';
+        });
+        chip.className = 'wizard-duration-chip py-1 rounded-lg text-[11px] font-bold border transition bg-brand-terracotta text-white border-brand-terracotta shadow-2xs active';
+        this.updateTimeSummary();
+      });
+    });
+
+    // 地點與陪伴人手動輸入
+    this.wizardLocationInput?.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (val) {
+        this.wizardData.location = val;
+        if (this.wizardSelectedLocationBadge) this.wizardSelectedLocationBadge.textContent = val;
+      }
+    });
+
+    this.wizardCompanionInput?.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (val) {
+        this.wizardData.companion = val;
+        if (this.wizardSelectedCompanionBadge) this.wizardSelectedCompanionBadge.textContent = val;
+      }
+    });
+
+    // 備註叮嚀點選
+    this.wizardNotesChips?.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const text = chip.textContent.replace(/^\+\s*/, '').trim();
+        if (!this.wizardNotesInput) return;
+        const curr = this.wizardNotesInput.value.trim();
+        if (curr) {
+          if (!curr.includes(text)) {
+            this.wizardNotesInput.value = `${curr}；${text}`;
+          }
+        } else {
+          this.wizardNotesInput.value = text;
+        }
+        this.wizardData.notes = this.wizardNotesInput.value;
+      });
+    });
+
+    this.wizardNotesInput?.addEventListener('input', (e) => {
+      this.wizardData.notes = e.target.value;
+    });
+  }
+
+  openCreateActivityWizard() {
+    const rec = store.getActiveRecipient();
+    this.wizardCurrentStep = 1;
+
+    // 更新頂部被照護者標籤
+    if (this.wizardRecipientAvatar) this.wizardRecipientAvatar.textContent = rec.avatar;
+    if (this.wizardRecipientName) this.wizardRecipientName.textContent = rec.name;
+
+    // 重設活動精靈資料
+    this.wizardData = {
+      title: '',
+      category: rec.type === 'CHILD' ? '學習・益智' : '休閒・品茗',
+      isCustomCategory: false,
+      customCategory: '',
+      date: '2026-09-12',
+      dateLabel: '2026-09-12 (今天)',
+      hour: 15,
+      minute: 0,
+      duration: 60,
+      location: rec.type === 'CHILD' ? '書房遊戲角' : '客廳陽台',
+      companion: `女兒 ${store.state.currentUser.name}`,
+      notes: ''
+    };
+
+    if (this.wizardActTitle) this.wizardActTitle.value = '';
+    if (this.wizardCustomCategoryInput) this.wizardCustomCategoryInput.value = '';
+    if (this.wizardCustomCategoryBox) this.wizardCustomCategoryBox.classList.add('hidden');
+    if (this.wizardLocationInput) this.wizardLocationInput.value = '';
+    if (this.wizardCompanionInput) this.wizardCompanionInput.value = '';
+    if (this.wizardNotesInput) this.wizardNotesInput.value = '';
+
+    // 重設日期選擇晶片
+    if (this.wizardDatePicker) this.wizardDatePicker.value = '2026-09-12';
+    if (this.wizardSelectedDateLabel) this.wizardSelectedDateLabel.textContent = '2026-09-12 (今天)';
+    this.wizardDateChips?.forEach(chip => {
+      if (chip.dataset.dateOffset === '0') {
+        chip.className = 'wizard-date-chip px-3 py-1.5 rounded-xl text-xs font-bold transition border border-brand-terracotta bg-brand-terracotta text-white shadow-2xs';
+      } else {
+        chip.className = 'wizard-date-chip px-3 py-1.5 rounded-xl text-xs font-bold transition border border-[#D6C8B4] bg-[#FAF6ED] text-gray-700 hover:bg-[#F2E8DA]';
+      }
+    });
+
+    // 重設小時晶片 (預設 15:00)
+    this.wizardHourChips?.forEach(chip => {
+      if (chip.dataset.hour === '15') {
+        chip.className = 'wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-brand-terracotta text-white border-brand-terracotta shadow-2xs active';
+      } else {
+        chip.className = 'wizard-hour-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]';
+      }
+    });
+
+    // 重設分鐘晶片 (預設 00分)
+    this.wizardMinuteChips?.forEach(chip => {
+      if (chip.dataset.minute === '0') {
+        chip.className = 'wizard-minute-chip py-1 rounded-lg text-xs font-bold border transition bg-brand-terracotta text-white border-brand-terracotta shadow-2xs active';
+      } else {
+        chip.className = 'wizard-minute-chip py-1 rounded-lg text-xs font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]';
+      }
+    });
+
+    // 重設時長晶片 (預設 60分)
+    this.wizardDurationChips?.forEach(chip => {
+      if (chip.dataset.duration === '60') {
+        chip.className = 'wizard-duration-chip py-1 rounded-lg text-[11px] font-bold border transition bg-brand-terracotta text-white border-brand-terracotta shadow-2xs active';
+      } else {
+        chip.className = 'wizard-duration-chip py-1 rounded-lg text-[11px] font-bold border transition bg-white text-gray-700 border-[#D6C8B4] hover:bg-[#FAF6ED]';
+      }
+    });
+
+    this.renderWizardStep1Options();
+    this.renderWizardStep3Options();
+    this.updateClockHands(15, 0);
+    this.updateTimeSummary();
+    this.setWizardStep(1);
+
+    if (this.modalCreateActivityWizard) {
+      this.modalCreateActivityWizard.classList.remove('hidden');
+    }
+  }
+
+  closeCreateActivityWizard() {
+    if (this.modalCreateActivityWizard) {
+      this.modalCreateActivityWizard.classList.add('hidden');
+    }
+  }
+
+  setWizardStep(step) {
+    if (step < 1 || step > 4) return;
+    this.wizardCurrentStep = step;
+
+    // 步驟指示器與進度條
+    const progressWidths = ['0%', '33%', '66%', '100%'];
+    if (this.wizardProgressLine) {
+      this.wizardProgressLine.style.width = progressWidths[step - 1];
+    }
+
+    const stepHints = [
+      '步驟 1 / 4：活動主題與類型',
+      '步驟 2 / 4：日期與時鐘時間',
+      '步驟 3 / 4：活動地點與人員',
+      '步驟 4 / 4：核對資訊與建立'
+    ];
+    if (this.wizardStepHint) {
+      this.wizardStepHint.textContent = stepHints[step - 1];
+    }
+
+    this.wizardStepNodes?.forEach(node => {
+      const nodeStep = parseInt(node.dataset.step, 10);
+      const circle = node.querySelector('.wizard-node-circle');
+      const label = node.querySelector('span');
+
+      if (nodeStep < step) {
+        // 完成的步驟
+        circle.className = 'wizard-node-circle w-7 h-7 rounded-full bg-brand-sage text-white font-bold text-xs flex items-center justify-center transition shadow-2xs cursor-pointer';
+        circle.innerHTML = '✓';
+        if (label) {
+          label.className = 'text-[10px] font-bold text-brand-sage mt-0.5 cursor-pointer';
+        }
+      } else if (nodeStep === step) {
+        // 當前步驟
+        circle.className = 'wizard-node-circle w-7 h-7 rounded-full bg-brand-terracotta text-white font-bold text-xs flex items-center justify-center transition shadow-2xs ring-2 ring-brand-terracotta/30 ring-offset-1';
+        circle.textContent = String(nodeStep);
+        if (label) {
+          label.className = 'text-[10px] font-bold text-brand-terracotta mt-0.5';
+        }
+      } else {
+        // 未開始步驟
+        circle.className = 'wizard-node-circle w-7 h-7 rounded-full bg-gray-200 text-gray-500 font-bold text-xs flex items-center justify-center transition shadow-2xs';
+        circle.textContent = String(nodeStep);
+        if (label) {
+          label.className = 'text-[10px] font-bold text-gray-400 mt-0.5';
+        }
+      }
+    });
+
+    // 內容頁切換
+    if (this.wizardStep1) this.wizardStep1.classList.toggle('hidden', step !== 1);
+    if (this.wizardStep2) this.wizardStep2.classList.toggle('hidden', step !== 2);
+    if (this.wizardStep3) this.wizardStep3.classList.toggle('hidden', step !== 3);
+    if (this.wizardStep4) this.wizardStep4.classList.toggle('hidden', step !== 4);
+
+    // 底部按鈕文案與狀態
+    if (this.btnWizardPrev) {
+      this.btnWizardPrev.textContent = step === 1 ? '取消' : '← 回到上一步';
+    }
+
+    if (this.btnWizardNextText) {
+      if (step === 1) this.btnWizardNextText.textContent = '下一步：設定時間與時鐘';
+      else if (step === 2) this.btnWizardNextText.textContent = '下一步：選擇地點人員';
+      else if (step === 3) this.btnWizardNextText.textContent = '下一步：核對活動資訊';
+      else if (step === 4) {
+        this.btnWizardNextText.textContent = '確認建立活動 🎉';
+        this.renderWizardSummary();
+      }
+    }
+
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  }
+
+  renderWizardStep1Options() {
+    const rec = store.getActiveRecipient();
+    const isChild = rec.type === 'CHILD';
+
+    // 1. 常用靈感推薦 (依長輩或幼兒動態客製)
+    const suggestions = isChild
+      ? ['陪小宇大自然彩葉拼貼', '積木城堡搭建挑戰', '繪本共讀溫馨時光', '兒童公園體能放電', '幼兒塗鴉創意畫']
+      : ['陪奶奶客廳金萱品茗', '午後公園平緩漫步', '銀髮健走杖復健散步', '懷舊台語黑膠音樂欣賞', '家庭老照片回憶分享', '客廳溫和舒展操'];
+
+    if (this.wizardTitleSuggestions) {
+      this.wizardTitleSuggestions.innerHTML = suggestions.map(title => `
+        <button type="button" class="wizard-title-chip text-[11px] bg-[#FAF6ED] hover:bg-[#F2E8DA] border border-[#D6C8B4] text-gray-700 px-2.5 py-1 rounded-lg font-medium transition flex items-center space-x-1">
+          <span>💡</span>
+          <span>${title}</span>
+        </button>
+      `).join('');
+
+      this.wizardTitleSuggestions.querySelectorAll('.wizard-title-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const text = chip.querySelector('span:last-child').textContent;
+          if (this.wizardActTitle) this.wizardActTitle.value = text;
+          this.wizardData.title = text;
+          this.showToast(`已選入活動靈感：「${text}」`);
+        });
+      });
+    }
+
+    // 2. 活動類型推薦 (長輩 vs 幼兒)
+    const categories = isChild
+      ? [
+          { icon: '🧩', name: '學習・益智' },
+          { icon: '🎨', name: '藝術・創作' },
+          { icon: '🏃', name: '戶外・放電' },
+          { icon: '📖', name: '繪本・共讀' },
+          { icon: '🍰', name: '親子・手作' },
+          { icon: '🎵', name: '律動・音樂' }
+        ]
+      : [
+          { icon: '🍵', name: '休閒・品茗' },
+          { icon: '🚶', name: '戶外・散步' },
+          { icon: '🧘', name: '健康・伸展' },
+          { icon: '🎶', name: '音樂・懷舊' },
+          { icon: '🧠', name: '認知・益智' },
+          { icon: '🩺', name: '就醫・回診' }
+        ];
+
+    if (!this.wizardData.category || (!this.wizardData.isCustomCategory && !categories.some(c => c.name === this.wizardData.category))) {
+      this.wizardData.category = categories[0].name;
+    }
+
+    if (this.wizardCategoryChips) {
+      this.wizardCategoryChips.innerHTML = categories.map(cat => {
+        const isSelected = !this.wizardData.isCustomCategory && this.wizardData.category === cat.name;
+        const activeClass = isSelected
+          ? 'bg-brand-terracotta text-white border-brand-terracotta shadow-xs font-bold'
+          : 'bg-[#FAF6ED] text-gray-700 border-[#D6C8B4] hover:bg-[#F2E8DA] font-semibold';
+        return `
+          <button type="button" class="wizard-category-chip p-2.5 rounded-xl border text-left flex items-center space-x-2 transition ${activeClass}" data-category="${cat.name}">
+            <span class="text-base">${cat.icon}</span>
+            <span class="text-xs truncate">${cat.name}</span>
+          </button>
+        `;
+      }).join('');
+
+      this.wizardCategoryChips.querySelectorAll('.wizard-category-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const catName = chip.dataset.category;
+          this.wizardData.category = catName;
+          this.wizardData.isCustomCategory = false;
+          if (this.wizardCustomCategoryBox) this.wizardCustomCategoryBox.classList.add('hidden');
+          if (this.wizardSelectedCategoryBadge) this.wizardSelectedCategoryBadge.textContent = '已選：' + catName;
+
+          this.wizardCategoryChips.querySelectorAll('.wizard-category-chip').forEach(c => {
+            c.className = 'wizard-category-chip p-2.5 rounded-xl border text-left flex items-center space-x-2 transition bg-[#FAF6ED] text-gray-700 border-[#D6C8B4] hover:bg-[#F2E8DA] font-semibold';
+          });
+          chip.className = 'wizard-category-chip p-2.5 rounded-xl border text-left flex items-center space-x-2 transition bg-brand-terracotta text-white border-brand-terracotta shadow-xs font-bold';
+        });
+      });
+    }
+
+    if (this.wizardSelectedCategoryBadge) {
+      this.wizardSelectedCategoryBadge.textContent = '已選：' + (this.wizardData.isCustomCategory ? (this.wizardData.customCategory || '自訂類型') : this.wizardData.category);
+    }
+  }
+
+  renderWizardStep3Options() {
+    const rec = store.getActiveRecipient();
+    const isChild = rec.type === 'CHILD';
+
+    // 1. 地點
+    const locations = isChild
+      ? ['書房遊戲角', '客廳地墊區', '社區中庭遊戲場', '大安森林公園', '兒童探索館', '陽台植物觀察區']
+      : ['客廳陽台', '社區公園林蔭道', '家庭餐桌茶几', '社區復健中心', '附近長青步道', '居家主臥套房'];
+
+    if (!this.wizardData.location) {
+      this.wizardData.location = locations[0];
+    }
+
+    if (this.wizardLocationChips) {
+      this.wizardLocationChips.innerHTML = locations.map(loc => {
+        const isSelected = this.wizardData.location === loc;
+        const cls = isSelected
+          ? 'bg-brand-terracotta text-white border-brand-terracotta shadow-2xs font-bold'
+          : 'bg-[#FAF6ED] text-gray-700 border-[#D6C8B4] hover:bg-[#F2E8DA] font-semibold';
+        return `
+          <button type="button" class="wizard-loc-chip px-3 py-1.5 rounded-xl text-xs border transition ${cls}" data-loc="${loc}">
+            📍 ${loc}
+          </button>
+        `;
+      }).join('');
+
+      this.wizardLocationChips.querySelectorAll('.wizard-loc-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const loc = chip.dataset.loc;
+          this.wizardData.location = loc;
+          if (this.wizardLocationInput) this.wizardLocationInput.value = loc;
+          if (this.wizardSelectedLocationBadge) this.wizardSelectedLocationBadge.textContent = loc;
+
+          this.wizardLocationChips.querySelectorAll('.wizard-loc-chip').forEach(c => {
+            c.className = 'wizard-loc-chip px-3 py-1.5 rounded-xl text-xs border transition bg-[#FAF6ED] text-gray-700 border-[#D6C8B4] hover:bg-[#F2E8DA] font-semibold';
+          });
+          chip.className = 'wizard-loc-chip px-3 py-1.5 rounded-xl text-xs border transition bg-brand-terracotta text-white border-brand-terracotta shadow-2xs font-bold';
+        });
+      });
+    }
+    if (this.wizardSelectedLocationBadge) this.wizardSelectedLocationBadge.textContent = this.wizardData.location;
+
+    // 2. 陪伴責任人
+    const companions = [
+      `女兒 ${store.state.currentUser.name}`,
+      '照護夥伴 林專員',
+      '兒子 王大偉',
+      '孫女 小萱',
+      '鄰里志工 陳阿姨'
+    ];
+
+    if (!this.wizardData.companion) {
+      this.wizardData.companion = companions[0];
+    }
+
+    if (this.wizardCompanionChips) {
+      this.wizardCompanionChips.innerHTML = companions.map(comp => {
+        const isSelected = this.wizardData.companion === comp;
+        const cls = isSelected
+          ? 'bg-brand-sage text-white border-brand-sage shadow-2xs font-bold'
+          : 'bg-[#FAF6ED] text-gray-700 border-[#D6C8B4] hover:bg-[#F2E8DA] font-semibold';
+        return `
+          <button type="button" class="wizard-comp-chip px-3 py-1.5 rounded-xl text-xs border transition ${cls}" data-comp="${comp}">
+            👤 ${comp}
+          </button>
+        `;
+      }).join('');
+
+      this.wizardCompanionChips.querySelectorAll('.wizard-comp-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const comp = chip.dataset.comp;
+          this.wizardData.companion = comp;
+          if (this.wizardCompanionInput) this.wizardCompanionInput.value = comp;
+          if (this.wizardSelectedCompanionBadge) this.wizardSelectedCompanionBadge.textContent = comp;
+
+          this.wizardCompanionChips.querySelectorAll('.wizard-comp-chip').forEach(c => {
+            c.className = 'wizard-comp-chip px-3 py-1.5 rounded-xl text-xs border transition bg-[#FAF6ED] text-gray-700 border-[#D6C8B4] hover:bg-[#F2E8DA] font-semibold';
+          });
+          chip.className = 'wizard-comp-chip px-3 py-1.5 rounded-xl text-xs border transition bg-brand-sage text-white border-brand-sage shadow-2xs font-bold';
+        });
+      });
+    }
+    if (this.wizardSelectedCompanionBadge) this.wizardSelectedCompanionBadge.textContent = this.wizardData.companion;
+  }
+
+  updateClockHands(hour, minute) {
+    const hourAngle = ((hour % 12) + minute / 60) * 30;
+    const minuteAngle = minute * 6;
+    if (this.clockHandHour) {
+      this.clockHandHour.setAttribute('transform', `rotate(${hourAngle} 50 50)`);
+    }
+    if (this.clockHandMinute) {
+      this.clockHandMinute.setAttribute('transform', `rotate(${minuteAngle} 50 50)`);
+    }
+    if (this.wizardClockTimeDisplay) {
+      this.wizardClockTimeDisplay.textContent = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    }
+  }
+
+  updateTimeSummary() {
+    const hour = this.wizardData.hour;
+    const minute = this.wizardData.minute;
+    const duration = this.wizardData.duration;
+
+    const startStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    const totalEndMin = hour * 60 + minute + duration;
+    const endH = Math.floor(totalEndMin / 60) % 24;
+    const endM = totalEndMin % 60;
+    const endStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+
+    const rangeStr = `${startStr}–${endStr}`;
+    if (this.wizardTimeRangeText) {
+      this.wizardTimeRangeText.textContent = rangeStr;
+    }
+
+    let durLabel = `${duration} 分鐘`;
+    if (duration === 60) durLabel = '1 小時';
+    else if (duration === 90) durLabel = '1.5 小時';
+    else if (duration === 120) durLabel = '2 小時';
+
+    if (this.wizardClockDurationDisplay) {
+      this.wizardClockDurationDisplay.textContent = `(預計 ${durLabel})`;
+    }
+  }
+
+  renderWizardSummary() {
+    if (!this.wizardSummaryCard) return;
+    const rec = store.getActiveRecipient();
+    const timeRange = this.wizardTimeRangeText ? this.wizardTimeRangeText.textContent : '15:00–16:00';
+    const category = this.wizardData.isCustomCategory ? (this.wizardData.customCategory || '自訂類型') : this.wizardData.category;
+    const notes = this.wizardData.notes ? this.wizardData.notes : '無特別備註（自主溫馨陪伴）';
+
+    this.wizardSummaryCard.innerHTML = `
+      <div class="flex items-start justify-between border-b border-[#E5D2BA] pb-3">
+        <div class="flex items-center space-x-3">
+          <span class="text-3xl p-2 bg-white rounded-2xl shadow-xs border border-[#E5D2BA]">${rec.avatar}</span>
+          <div>
+            <span class="text-[11px] bg-brand-terracotta/15 text-brand-terracotta font-bold px-2 py-0.5 rounded-full">${rec.name} 專屬行程</span>
+            <h4 class="font-bold text-base text-[#2C241E] mt-0.5">${this.wizardData.title || '未命名活動'}</h4>
+          </div>
+        </div>
+        <span class="text-xs bg-[#FAF6ED] border border-brand-terracotta/30 text-brand-terracotta font-bold px-2.5 py-1 rounded-xl">
+          🏷️ ${category}
+        </span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5 text-xs text-[#2C241E] pt-1">
+        <div class="bg-white/80 p-2.5 rounded-xl border border-[#E8DFD3] space-y-1">
+          <span class="text-[10px] text-gray-400 block font-bold">📅 活動日期</span>
+          <span class="font-bold text-gray-800">${this.wizardData.dateLabel || this.wizardData.date}</span>
+        </div>
+
+        <div class="bg-white/80 p-2.5 rounded-xl border border-[#E8DFD3] space-y-1">
+          <span class="text-[10px] text-gray-400 block font-bold">🕒 預定時間段</span>
+          <span class="font-mono font-bold text-brand-terracotta">${timeRange} (${this.wizardData.duration}分鐘)</span>
+        </div>
+
+        <div class="bg-white/80 p-2.5 rounded-xl border border-[#E8DFD3] space-y-1">
+          <span class="text-[10px] text-gray-400 block font-bold">📍 進行地點</span>
+          <span class="font-bold text-gray-800">${this.wizardData.location}</span>
+        </div>
+
+        <div class="bg-white/80 p-2.5 rounded-xl border border-[#E8DFD3] space-y-1">
+          <span class="text-[10px] text-gray-400 block font-bold">👤 陪伴責任人</span>
+          <span class="font-bold text-brand-sage">${this.wizardData.companion}</span>
+        </div>
+      </div>
+
+      <div class="bg-white/80 p-2.5 rounded-xl border border-[#E8DFD3] space-y-1 text-xs">
+        <span class="text-[10px] text-gray-400 block font-bold">📝 備註與叮嚀</span>
+        <p class="text-gray-700 text-[11px] leading-relaxed">${notes}</p>
+      </div>
+    `;
+  }
+
+  handleWizardNext() {
+    if (this.wizardCurrentStep === 1) {
+      const title = this.wizardActTitle ? this.wizardActTitle.value.trim() : '';
+      if (!title) {
+        this.showToast('⚠️ 請輸入活動名稱或由靈感推薦點選！');
+        if (this.wizardActTitle) this.wizardActTitle.focus();
+        return;
+      }
+      this.wizardData.title = title;
+
+      if (this.wizardData.isCustomCategory) {
+        const customCat = this.wizardCustomCategoryInput ? this.wizardCustomCategoryInput.value.trim() : '';
+        if (!customCat) {
+          this.showToast('⚠️ 請填寫自訂的活動類型名稱');
+          if (this.wizardCustomCategoryInput) this.wizardCustomCategoryInput.focus();
+          return;
+        }
+        this.wizardData.category = customCat;
+      }
+
+      this.setWizardStep(2);
+      return;
+    }
+
+    if (this.wizardCurrentStep === 2) {
+      this.setWizardStep(3);
+      return;
+    }
+
+    if (this.wizardCurrentStep === 3) {
+      const locVal = this.wizardLocationInput ? this.wizardLocationInput.value.trim() : '';
+      if (locVal) this.wizardData.location = locVal;
+      const compVal = this.wizardCompanionInput ? this.wizardCompanionInput.value.trim() : '';
+      if (compVal) this.wizardData.companion = compVal;
+      if (this.wizardNotesInput) this.wizardData.notes = this.wizardNotesInput.value.trim();
+      this.setWizardStep(4);
+      return;
+    }
+
+    if (this.wizardCurrentStep === 4) {
+      this.submitCreateActivityWizard();
+    }
+  }
+
+  submitCreateActivityWizard() {
+    const rec = store.getActiveRecipient();
+    const timeRange = this.wizardTimeRangeText ? this.wizardTimeRangeText.textContent : '15:00–16:00';
+    const category = this.wizardData.isCustomCategory ? (this.wizardData.customCategory || '自訂類型') : this.wizardData.category;
+    const title = this.wizardData.title || `陪${rec.name}散步日常`;
 
     const newAct = {
       id: 'act-' + Date.now(),
       recipientId: rec.id,
-      title,
-      category,
-      scheduledDate: '2026-09-12',
-      scheduledTime: time,
-      location,
-      leadCompanion: `女兒 ${store.state.currentUser.name}`,
+      title: title,
+      category: category,
+      scheduledDate: this.wizardData.date,
+      scheduledTime: timeRange,
+      location: this.wizardData.location,
+      leadCompanion: this.wizardData.companion,
       coParticipants: [],
-      notes: '自主手動建立的溫馨生活陪伴',
+      notes: this.wizardData.notes || '步驟引導式精靈建立的溫馨陪伴安排',
       status: 'SCHEDULED',
       mode: 'FAMILY',
       careRequestId: null,
@@ -3893,11 +4616,22 @@ class CareCircleApp {
     };
 
     store.state.activities.unshift(newAct);
-    store.logAudit('手動建立新活動', title);
+    store.logAudit('步驟引導式建立新活動', `${rec.name} - ${title} (${timeRange})`);
     store.save();
 
-    this.showToast(`已建立活動「${title}」！`);
-    this.renderActivities(this.currentActivityFilter || 'ALL');
+    this.closeCreateActivityWizard();
+    this.showToast(`🎉 已成功為【${rec.name}】建立活動「${title}」！`);
+
+    // 切換或重整活動 Tab
+    if (this.currentTab === 'tab-activity') {
+      this.renderActivities(this.currentActivityFilter || 'ALL');
+    } else {
+      this.switchTab('tab-activity');
+    }
+  }
+
+  promptCreateActivity() {
+    this.openCreateActivityWizard();
   }
 
   promptAddHandoff() {
