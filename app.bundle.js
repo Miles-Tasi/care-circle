@@ -1,7 +1,9 @@
 /**
- * 照護圈 (Care Circle) - 整合相容腳本 (app.bundle.js)
+ * 照護圈 (Care Circle) - 整合相容腳本 (app.bundle.js) v1.1.0
  * 支援雙擊 index.html (file://) 與本機伺服器 (http://localhost:8000) 零 CORS 跨域限制運作
  */
+const APP_VERSION = '1.1.0';
+console.log('🌸 照護圈 Care Circle v' + APP_VERSION + ' (正式版) 已成功載入');
 
 // --- 1. 花語與卡片主題模組 ---
 /**
