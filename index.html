@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>照護圈 · 家庭照護夥伴平台 (Care Circle)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Google Fonts: Plus Jakarta Sans, Noto Sans TC, Noto Serif TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+  
+  <!-- 自定義樣式與 3D 翻卡動效 -->
+  <link rel="stylesheet" href="style.css?v=3">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              terracotta: '#D97736',
+              'terracotta-dark': '#B8581B',
+              sage: '#4A7C59',
+              'sage-dark': '#34583E',
+              amber: '#F59E0B',
+              warm: '#FAF6ED',
+              cream: '#FDFBF7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#FDFBF7] text-[#2C241E] min-h-screen pb-24 transition-colors duration-300">
+
+  <!-- ========================================================================
+       頂部全局導覽列 (Top Header)
+       包含：當前照護對象 (長輩/幼兒切換)、多身分切換標籤 (家庭/夥伴)、通知鈴鐺
+       ======================================================================== -->
+  <header class="sticky top-0 z-40 bg-[#FDFBF7]/95 backdrop-blur-md border-b border-[#E8DFD3] px-4 py-3 shadow-xs">
+    <div class="max-w-2xl mx-auto flex items-center justify-between">
+      
+      <!-- 照護對象切換器 (長輩 / 幼兒) -->
+      <button id="btn-recipient-selector" class="flex items-center space-x-2 bg-white px-3.5 py-1.5 rounded-full border border-[#E8DFD3] hover:border-[#D97736] transition shadow-xs">
+        <span id="header-recipient-avatar" class="text-xl">👵</span>
+        <div class="text-left">
+          <div class="flex items-center space-x-1.5">
+            <span id="header-recipient-name" class="font-bold text-sm text-[#2C241E]">王奶奶</span>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500"></i>
+          </div>
+          <span id="header-recipient-type-badge" class="text-[10px] text-brand-terracotta bg-[#FBEFE6] px-1.5 py-0.2 rounded-sm font-medium">長輩照護圈 · 82歲</span>
+        </div>
+      </button>
+
+      <!-- 右側：身分切換標籤與快捷操作 -->
+      <div class="flex items-center space-x-2">
+        <!-- 角色模式切換開關 -->
+        <button id="btn-toggle-role" class="flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition shadow-xs bg-[#EFE9DE] text-[#2C241E] border-[#D6C8B4] hover:bg-[#E2D9CB]">
+          <span id="role-badge-icon">🏠</span>
+          <span id="role-badge-text">家庭模式</span>
+          <i data-lucide="arrow-left-right" class="w-3 h-3 ml-0.5 opacity-60"></i>
+        </button>
+
+        <!-- AI 小照快捷呼叫鈴 -->
+        <button id="btn-open-ai" class="p-2 rounded-full bg-[#FAF6ED] text-brand-terracotta hover:bg-[#F3ECE0] border border-[#E8DFD3] relative transition" title="呼叫 AI 照護協作員小照">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-brand-terracotta rounded-full animate-ping"></span>
+        </button>
+
+        <!-- 資料重置 (測試重設種子) -->
+        <button id="btn-reset-demo" class="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition" title="重設示範資料">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       主內容區域 (Main Content Area) - 4 大 Tab 容器
+       ======================================================================== -->
+  <main class="max-w-2xl mx-auto px-4 py-4">
+    
+    <!-- ==================== TAB 1: 🏠 首頁 (HOME) ==================== -->
+    <section id="tab-home" class="space-x-0 space-y-4">
+      
+      <!-- 今日生活情報與氣候小幫手 -->
+      <div class="bg-gradient-to-r from-[#F9F5EC] to-[#F1E9DA] rounded-2xl p-4 border border-[#E8DFD3] shadow-xs flex items-center justify-between">
+        <div class="space-y-1">
+          <div class="flex items-center space-x-2">
+            <span class="text-xl">🌦️</span>
+            <span class="text-xs font-semibold text-brand-terracotta tracking-wider uppercase">今日生活情報</span>
+            <span class="text-xs text-gray-500">| 台北市大安區 · 24°C 微風</span>
+          </div>
+          <p id="home-weather-insight" class="text-sm font-medium text-[#42362E] leading-relaxed">
+            王奶奶最近 8 天沒有去公園，今天天氣溫暖晴朗，下午 15:30 適合安排戶外散步曬曬太陽。
+          </p>
+        </div>
+      </div>
+
+      <!-- 🎴 今天做什麼？ (Inspiration Feed Hero Card) -->
+      <div class="bg-white rounded-2xl p-5 border-2 border-brand-terracotta/30 hover:border-brand-terracotta transition shadow-sm relative overflow-hidden">
+        <div class="absolute -right-6 -bottom-6 opacity-10 pointer-events-none">
+          <i data-lucide="flower2" class="w-36 h-36 text-brand-terracotta"></i>
+        </div>
+        
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-2">
+            <span class="text-2xl">🎴</span>
+            <div>
+              <h2 class="text-lg font-bold text-[#2C241E]">今天做什麼？</h2>
+              <p class="text-xs text-gray-500">不用自己想，系統結合節氣與長輩偏好為您推薦</p>
+            </div>
+          </div>
+          <button id="btn-draw-card-trigger" class="flex items-center space-x-1.5 bg-brand-terracotta hover:bg-brand-terracotta-dark text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition transform active:scale-95 animate-pulse-glow">
+            <span>抽一張</span>
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div id="home-recommendation-preview" class="bg-[#FAF6ED] rounded-xl p-3.5 border border-[#EADFCF] flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-xl shadow-xs">
+              🌳
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <span id="preview-act-title" class="font-bold text-sm text-[#2C241E]">大安森林公園綠意散步</span>
+                <span id="preview-act-category" class="text-[10px] bg-[#EAE2D5] text-[#55473E] px-2 py-0.5 rounded-full">戶外・散步</span>
+              </div>
+              <p id="preview-act-reason" class="text-xs text-gray-500 mt-0.5">✓ 天氣適宜 24°C　✓ 長輩喜愛園藝　✓ 步態平穩</p>
+            </div>
+          </div>
+          <button id="btn-preview-accept" class="text-xs font-bold text-brand-terracotta hover:underline ml-2 whitespace-nowrap">
+            就做這件事 →
+          </button>
+        </div>
+      </div>
+
+      <!-- 🤝 今天誰陪？ (Companionship Status Widget) -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs">
+        <div class="flex items-center justify-between mb-2.5">
+          <div class="flex items-center space-x-2">
+            <span class="text-xl">🤝</span>
+            <h3 class="text-sm font-bold text-[#2C241E]">今天誰陪？</h3>
+          </div>
+          <span class="text-xs bg-[#EAF2EC] text-brand-sage font-medium px-2 py-0.5 rounded-full flex items-center space-x-1">
+            <span class="w-1.5 h-1.5 bg-brand-sage rounded-full animate-ping"></span>
+            <span id="companionship-status-tag">已排定陪伴人員</span>
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- 路徑 A: 我和家人陪 -->
+          <div class="bg-[#FAF6ED] rounded-xl p-3 border border-[#E8DFD3] flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-1.5 text-xs font-bold text-brand-terracotta">
+                <span>🏠</span>
+                <span>我和家人陪</span>
+              </div>
+              <p id="companion-family-name" class="text-sm font-bold text-[#2C241E] mt-1">女兒 王小敏</p>
+              <p class="text-[11px] text-gray-500 mt-0.5">預約下午 15:30 陪同散步</p>
+            </div>
+            <button id="btn-start-family-accompany" class="mt-2 text-xs bg-white hover:bg-[#F3ECE0] text-[#2C241E] font-semibold py-1 px-2.5 rounded-lg border border-[#D6C8B4] transition text-center shadow-2xs">
+              開啟陪伴活動
+            </button>
+          </div>
+
+          <!-- 路徑 B: 找照護夥伴 -->
+          <div class="bg-[#F4F7F5] rounded-xl p-3 border border-[#CFDFD6] flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-1.5 text-xs font-bold text-brand-sage">
+                <span>🤝</span>
+                <span>找照護夥伴</span>
+              </div>
+              <p class="text-xs text-gray-600 mt-1">臨時抽不開身？讓受信任夥伴陪伴</p>
+              <p class="text-[11px] text-gray-500 mt-0.5">社區合格居服員 / 伴走夥伴</p>
+            </div>
+            <button id="btn-request-caregiver-open" class="mt-2 text-xs bg-brand-sage hover:bg-brand-sage-dark text-white font-semibold py-1 px-2.5 rounded-lg transition text-center shadow-2xs">
+              發布陪伴需求
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 📅 今日活動 (Today's Activities) -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-2">
+            <span class="text-xl">📅</span>
+            <h3 class="text-sm font-bold text-[#2C241E]">今日活動</h3>
+          </div>
+          <button id="btn-go-to-activities" class="text-xs text-brand-terracotta hover:underline font-medium">查看全部 →</button>
+        </div>
+        <div id="home-today-activities-list" class="space-y-2.5">
+          <!-- 動態載入今日活動 -->
+        </div>
+      </div>
+
+      <!-- 🎴 最近完成的活動卡 (Recent Cards Preview with 3D Flip) -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-2">
+            <span class="text-xl">🎴</span>
+            <div>
+              <h3 class="text-sm font-bold text-[#2C241E]">生活圖鑑 · 最新解鎖</h3>
+              <p class="text-[11px] text-gray-400">每一次用心陪伴，都凝聚成一張珍藏卡</p>
+            </div>
+          </div>
+          <button id="btn-go-to-collection" class="text-xs text-brand-terracotta hover:underline font-medium">圖鑑館 →</button>
+        </div>
+        <div id="home-recent-cards-carousel" class="flex space-x-3 overflow-x-auto pb-2 scrollbar-none">
+          <!-- 動態載入最近活動卡 -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 2: 📅 活動 (ACTIVITY) ==================== -->
+    <section id="tab-activity" class="space-y-4 hidden">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-[#2C241E]">活動與陪伴安排</h2>
+          <p class="text-xs text-gray-500">管理長輩日常活動與照護夥伴委託</p>
+        </div>
+        <button id="btn-create-activity-open" class="flex items-center space-x-1.5 bg-brand-terracotta hover:bg-brand-terracotta-dark text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>新增活動</span>
+        </button>
+      </div>
+
+      <!-- 狀態篩選 Tabs -->
+      <div class="flex space-x-2 overflow-x-auto pb-1 text-xs font-medium">
+        <button class="activity-filter-btn active px-3 py-1.5 rounded-lg bg-brand-terracotta text-white" data-filter="ALL">全部</button>
+        <button class="activity-filter-btn px-3 py-1.5 rounded-lg bg-white border border-[#E8DFD3] text-gray-600 hover:bg-gray-50" data-filter="SCHEDULED">待開始</button>
+        <button class="activity-filter-btn px-3 py-1.5 rounded-lg bg-white border border-[#E8DFD3] text-gray-600 hover:bg-gray-50" data-filter="IN_PROGRESS">進行中</button>
+        <button class="activity-filter-btn px-3 py-1.5 rounded-lg bg-white border border-[#E8DFD3] text-gray-600 hover:bg-gray-50" data-filter="COMPLETED">已完成</button>
+      </div>
+
+      <!-- 活動列表容器 -->
+      <div id="activity-full-list" class="space-y-3">
+        <!-- 動態載入活動卡片 -->
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: 🎴 生活圖鑑 (COLLECTION) ==================== -->
+    <section id="tab-collection" class="space-y-4 hidden">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-[#2C241E]">生活圖鑑與回憶</h2>
+          <p class="text-xs text-gray-500">珍藏長輩日常的每一朵花語與生活故事</p>
+        </div>
+        <!-- 檢視切換：生活圖鑑 vs 回憶冊 -->
+        <div class="flex bg-[#EFE9DE] p-1 rounded-xl text-xs font-bold">
+          <button id="btn-subtab-cards" class="px-3 py-1 rounded-lg bg-white text-[#2C241E] shadow-2xs transition">🎴 圖鑑</button>
+          <button id="btn-subtab-memorybook" class="px-3 py-1 rounded-lg text-gray-600 hover:text-black transition">📕 回憶冊</button>
+        </div>
+      </div>
+
+      <!-- 篩選列 -->
+      <div id="collection-filter-bar" class="flex items-center space-x-2 overflow-x-auto pb-1 text-xs">
+        <select id="select-card-recipient" class="bg-white border border-[#E8DFD3] rounded-lg px-2.5 py-1 text-[#2C241E]">
+          <option value="ALL">全部對象</option>
+          <option value="rec-001">王奶奶</option>
+          <option value="rec-002">王爺爺</option>
+          <option value="rec-004">小宇 (幼兒)</option>
+        </select>
+
+        <select id="select-card-season" class="bg-white border border-[#E8DFD3] rounded-lg px-2.5 py-1 text-[#2C241E]">
+          <option value="ALL">四季花語 (全部)</option>
+          <option value="春季">春日花卉</option>
+          <option value="夏季">夏日暖陽</option>
+          <option value="秋季">金秋桂杏</option>
+          <option value="冬季">冬日山茶</option>
+        </select>
+      </div>
+
+      <!-- 視圖 A: 生活圖鑑網格 (Stamp Grid) -->
+      <div id="view-collection-grid" class="grid grid-cols-2 gap-3.5">
+        <!-- 動態載入圖鑑卡 -->
+      </div>
+
+      <!-- 視圖 B: 回憶冊 (Memory Book Story) -->
+      <div id="view-memory-book" class="hidden space-y-4">
+        <!-- 動態載入回憶冊時間軸 -->
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: 👤 我的 (MY / PROFILE & CIRCLE) ==================== -->
+    <section id="tab-my" class="space-y-4 hidden">
+      
+      <!-- 個人資料名片 -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <span class="text-3xl p-2 bg-[#FAF6ED] rounded-2xl border border-[#EADFCF]">👩‍💼</span>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="font-bold text-[#2C241E] text-base">王小敏</h3>
+              <span class="text-[10px] bg-[#EAF2EC] text-brand-sage px-2 py-0.5 rounded-full font-semibold">主照顧者</span>
+            </div>
+            <p class="text-xs text-gray-500 mt-0.5">王家幸福照護圈 · 管理者</p>
+          </div>
+        </div>
+        <!-- 身分快速切換大按鈕 -->
+        <button id="btn-switch-role-prominent" class="text-xs bg-[#FAF6ED] hover:bg-[#F3ECE0] text-brand-terracotta font-bold px-3 py-2 rounded-xl border border-brand-terracotta/40 transition flex items-center space-x-1 shadow-2xs">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span id="role-switch-label">切換至夥伴模式</span>
+        </button>
+      </div>
+
+      <!-- 區塊 A: 照護夥伴專屬工作台 (當角色為 CAREGIVER 時展示) -->
+      <div id="caregiver-workspace-container" class="hidden space-y-4">
+        <div class="bg-gradient-to-r from-[#2E7D52] to-[#1E5C3B] rounded-2xl p-4 text-white shadow-md">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs uppercase tracking-wider font-semibold opacity-80">🤝 照護夥伴專業工作台</span>
+            <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">已認證夥伴</span>
+          </div>
+          <h3 class="text-lg font-bold">今日工作與行程</h3>
+          <p class="text-xs opacity-90 mt-1">服務地區：台北市大安區、中正區 | 時薪行情：NT$ 400–500/hr</p>
+        </div>
+
+        <!-- 夥伴接單與服務中卡片清單 -->
+        <div class="bg-white rounded-2xl p-4 border border-[#CFDFD6] shadow-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-bold text-[#1C2E24]">可接單陪伴需求 (Care Requests)</h4>
+            <span class="text-xs text-gray-400">即時推播媒合</span>
+          </div>
+          <div id="caregiver-requests-pool" class="space-y-2.5">
+            <!-- 動態載入可接單卡片 -->
+          </div>
+        </div>
+
+        <!-- 履約打卡模擬 (Service Check-in & Logs) -->
+        <div class="bg-white rounded-2xl p-4 border border-[#CFDFD6] shadow-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-bold text-[#1C2E24]">進行中服務打卡 (Care Service)</h4>
+            <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium">GPS 驗證</span>
+          </div>
+          <div id="caregiver-active-service-box" class="bg-[#F4F7F5] rounded-xl p-3 border border-[#CFDFD6] text-xs">
+            <!-- 進行中打卡狀態 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 區塊 B: 家庭照護圈管理 (當角色為 FAMILY 時展示) -->
+      <div id="family-workspace-container" class="space-y-4">
+        
+        <!-- 照護對象管理 (長輩 + 幼兒雙向擴展) -->
+        <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-xl">👵👶</span>
+              <div>
+                <h4 class="text-sm font-bold text-[#2C241E]">照護對象 (長輩 / 幼兒)</h4>
+                <p class="text-[11px] text-gray-400">支援同時照顧長輩與幼兒雙照護圈</p>
+              </div>
+            </div>
+            <button id="btn-add-recipient-open" class="text-xs font-bold text-brand-terracotta hover:underline flex items-center space-x-1">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>新增對象</span>
+            </button>
+          </div>
+          <div id="my-recipients-list" class="grid grid-cols-2 gap-2.5">
+            <!-- 動態載入家庭對象名單 -->
+          </div>
+        </div>
+
+        <!-- 家庭成員名單與權限 -->
+        <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-xl">👨👩👧</span>
+              <div>
+                <h4 class="text-sm font-bold text-[#2C241E]">王家幸福照護圈 (Care Circle)</h4>
+                <p class="text-[11px] text-gray-400">3 位成員共同維護與交班</p>
+              </div>
+            </div>
+            <button id="btn-invite-member" class="text-xs bg-[#FAF6ED] hover:bg-[#F3ECE0] text-brand-terracotta border border-brand-terracotta/40 px-2.5 py-1 rounded-lg font-bold">
+              + 邀請家人
+            </button>
+          </div>
+          <div id="my-circle-members-list" class="space-y-2">
+            <!-- 動態載入成員名單 -->
+          </div>
+        </div>
+
+        <!-- 每日交班日誌入口 -->
+        <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-xl">📝</span>
+              <h4 class="text-sm font-bold text-[#2C241E]">今日交班日誌 (Daily Handoff)</h4>
+            </div>
+            <button id="btn-add-handoff-open" class="text-xs text-brand-terracotta hover:underline font-bold">+ 撰寫交班</button>
+          </div>
+          <div id="my-handoff-recent" class="bg-[#FAF6ED] rounded-xl p-3 border border-[#E8DFD3] text-xs space-y-1.5">
+            <!-- 動態載入最近一筆交班 -->
+          </div>
+        </div>
+
+        <!-- 申請成為照護夥伴入口 -->
+        <div class="bg-gradient-to-r from-[#FAF6ED] to-[#F3ECE0] rounded-2xl p-4 border border-[#E8DFD3] flex items-center justify-between">
+          <div class="space-y-0.5">
+            <span class="text-xs font-bold text-brand-sage flex items-center space-x-1">
+              <span>🤝</span>
+              <span>想要利用空閒時間陪伴鄰里長輩？</span>
+            </span>
+            <p class="text-xs text-gray-600">加入社區照護夥伴，彈性陪伴賺取報酬</p>
+          </div>
+          <button id="btn-apply-caregiver-open" class="text-xs bg-brand-sage text-white font-bold px-3 py-1.5 rounded-xl hover:bg-brand-sage-dark shadow-2xs transition">
+            成為照護夥伴
+          </button>
+        </div>
+
+        <!-- 審計日誌與隱私說明 -->
+        <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs space-y-2 text-xs text-gray-500">
+          <div class="flex items-center justify-between font-semibold text-gray-700">
+            <span>🔐 隱私合規與操作審計紀錄</span>
+            <span class="text-[10px] bg-gray-100 px-2 py-0.5 rounded">RBAC 圈內隔離</span>
+          </div>
+          <div id="my-audit-logs" class="space-y-1 max-h-24 overflow-y-auto font-mono text-[11px]">
+            <!-- 動態載入日誌 -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================
+       底部主要導覽列 (Bottom Navigation Bar)
+       4 大主要 Tab：🏠 首頁 | 📅 活動 | 🎴 生活圖鑑 | 👤 我的
+       ======================================================================== -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E8DFD3] py-2">
+    <div class="max-w-md mx-auto grid grid-cols-4 text-center">
+      
+      <!-- Tab 1: 首頁 -->
+      <button class="nav-tab-btn active flex flex-col items-center py-1 text-brand-terracotta" data-tab="tab-home">
+        <i data-lucide="home" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[11px] font-bold">首頁</span>
+      </button>
+
+      <!-- Tab 2: 活動 -->
+      <button class="nav-tab-btn flex flex-col items-center py-1 text-gray-400 hover:text-gray-600" data-tab="tab-activity">
+        <i data-lucide="calendar" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[11px] font-bold">活動</span>
+      </button>
+
+      <!-- Tab 3: 生活圖鑑 -->
+      <button class="nav-tab-btn flex flex-col items-center py-1 text-gray-400 hover:text-gray-600" data-tab="tab-collection">
+        <i data-lucide="flower2" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[11px] font-bold">生活圖鑑</span>
+      </button>
+
+      <!-- Tab 4: 我的 -->
+      <button class="nav-tab-btn flex flex-col items-center py-1 text-gray-400 hover:text-gray-600" data-tab="tab-my">
+        <i data-lucide="user" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[11px] font-bold">我的</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- ========================================================================
+       MODAL 1: 🎴 3D 活動卡與美式插畫花語背面檢視 (Interactive Card Modal)
+       ======================================================================== -->
+  <div id="modal-card-detail" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-sm flex flex-col items-center space-y-4">
+      
+      <!-- 提示條 -->
+      <div class="flex items-center justify-between w-full px-2 text-white text-xs">
+        <span class="font-medium flex items-center space-x-1">
+          <i data-lucide="rotate-3d" class="w-4 h-4"></i>
+          <span>點擊卡片或下方按鈕翻面查看</span>
+        </span>
+        <button id="btn-close-card-modal" class="p-1.5 rounded-full hover:bg-white/20 text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- 3D 翻轉卡片主體 (Flip Card Container) -->
+      <div id="card-3d-box" class="perspective-container w-full h-[530px] max-h-[85vh] cursor-pointer">
+        <div id="card-inner-element" class="flip-card-inner vintage-card-border rounded-2xl">
+          
+          <!-- 正面 (Card Front) -->
+          <div class="flip-card-front bg-[#FAF6ED] p-4 flex flex-col justify-between text-left">
+            <div>
+              <div class="flex items-center justify-between text-xs text-gray-500 border-b border-[#E8DFD3] pb-2 mb-2.5">
+                <span id="modal-card-number" class="font-serif tracking-widest text-[#796D64]">NO. 2026-0910</span>
+                <span id="modal-card-season-badge" class="bg-[#EFE9DE] px-2 py-0.5 rounded text-[10px] font-bold text-[#2C241E]">秋季 · 金秋桂香</span>
+              </div>
+              <div class="w-full h-56 rounded-xl overflow-hidden mb-3 border border-[#E8DFD3] relative">
+                <img id="modal-card-cover-img" src="" alt="活動照片" class="w-full h-full object-cover">
+                <span id="modal-card-compliment" class="absolute bottom-2 left-2 bg-black/60 backdrop-blur-xs text-white text-[11px] px-2.5 py-1 rounded-full font-medium">
+                  神采奕奕
+                </span>
+              </div>
+              <h3 id="modal-card-front-title" class="font-bold text-lg text-[#2C241E] leading-snug">
+                陽台金萱桂花品茗會
+              </h3>
+              <p id="modal-card-front-date" class="text-xs text-gray-500 mt-1">2026.09.10 · 陪同人：女兒 小敏</p>
+            </div>
+
+            <div class="pt-2 border-t border-dashed border-[#D6C8B4] flex items-center justify-between text-xs text-[#796D64]">
+              <span class="flex items-center space-x-1">
+                <i data-lucide="flower2" class="w-3.5 h-3.5 text-brand-terracotta"></i>
+                <span>翻至卡背查看專屬花語</span>
+              </span>
+              <span class="text-[10px] uppercase tracking-wider font-semibold text-brand-terracotta">Click to Flip ↻</span>
+            </div>
+          </div>
+
+          <!-- 背面 (Card Back - 美式復古手繪植物插畫風格) -->
+          <div class="flip-card-back p-5 flex flex-col justify-between text-left font-serif text-[#30261E]">
+            <div class="vintage-inner-frame p-4 rounded-xl h-full flex flex-col justify-between">
+              
+              <!-- 頂部：植物學標題 -->
+              <div class="text-center border-b border-[#D6C8B4] pb-2">
+                <p class="text-[9px] uppercase tracking-widest text-brand-amber font-bold font-sans">Botanical Almanac · 今日花語</p>
+                <div class="flex items-center justify-center space-x-1.5 mt-0.5">
+                  <h4 id="modal-flower-name" class="text-xl font-bold font-serif text-[#2C241E]">桂花</h4>
+                  <span id="modal-flower-english" class="text-xs italic text-gray-500">Sweet Osmanthus</span>
+                </div>
+              </div>
+
+              <!-- 中間：植物手繪圖案與花語 (約卡片一半大小，具立體浮雕勳章質感) -->
+              <div class="my-auto text-center space-y-2 flex flex-col items-center justify-center">
+                <div id="modal-flower-svg-container" class="embossed-botanical-cameo text-brand-amber">
+                  <!-- 30 款植物 SVG 圖案注入 (放大至約卡片一半大小，浮雕效果) -->
+                </div>
+                <div class="inline-block bg-[#F4EDE0] px-3.5 py-1 rounded-full border border-[#D9CDB8] shadow-2xs">
+                  <p id="modal-flower-language" class="text-xs font-bold text-brand-terracotta tracking-wider">
+                    吉祥・幽香・生活的回甘與圓滿
+                  </p>
+                </div>
+                <p id="modal-flower-desc" class="text-[11px] text-gray-600 italic px-2 leading-relaxed max-w-xs">
+                  小簇金黃暗香浮動，不爭春光卻在秋涼時送來最甘甜的暖意。
+                </p>
+              </div>
+
+              <!-- 底部：活動紀錄與陪伴者隨筆 -->
+              <div class="border-t border-[#D6C8B4] pt-2 text-[11px] space-y-1 font-sans">
+                <div class="flex items-center justify-between text-gray-500">
+                  <span id="modal-card-back-participants">👥 王奶奶、女兒 小敏</span>
+                  <span id="modal-card-back-metrics">⏱️ 45 分鐘</span>
+                </div>
+                <p id="modal-card-back-notes" class="text-gray-700 italic line-clamp-3 bg-white/70 p-1.5 rounded border border-[#EFE5D5]">
+                  「在陽台泡了桂花茶，老人家說這味道跟五十年前外婆泡的一模一樣，笑得非常開心。」
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 控制按鈕 -->
+      <div class="flex items-center space-x-3 w-full">
+        <button id="btn-flip-card-action" class="flex-1 py-2.5 bg-white text-[#2C241E] rounded-xl font-bold text-xs hover:bg-[#FAF6ED] transition shadow-md flex items-center justify-center space-x-1.5">
+          <i data-lucide="refresh-cw" class="w-4 h-4 text-brand-terracotta"></i>
+          <span>旋轉翻面 (Flip)</span>
+        </button>
+        <button id="btn-share-card-action" class="flex-1 py-2.5 bg-brand-terracotta text-white rounded-xl font-bold text-xs hover:bg-brand-terracotta-dark transition shadow-md flex items-center justify-center space-x-1.5">
+          <i data-lucide="share-2" class="w-4 h-4"></i>
+          <span>分享至 Line 家庭圈</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 2: 🎲 時勢抽卡體驗 Modal (Interactive Card Draw)
+       ======================================================================== -->
+  <div id="modal-draw-card" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <!-- 粒子特效畫布 (Canvas Confetti & Stars) -->
+    <canvas id="draw-confetti-canvas" class="absolute inset-0 pointer-events-none z-30"></canvas>
+
+    <div class="bg-white w-full max-w-md rounded-3xl p-5 border border-[#E8DFD3] shadow-2xl space-y-4 relative z-20 overflow-hidden">
+      
+      <!-- 頂部標題與額度 -->
+      <div class="flex items-center justify-between border-b border-[#E8DFD3] pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-2xl">🎲</span>
+          <div>
+            <h3 class="font-bold text-base text-[#2C241E]">時勢抽卡 · 今日靈感探索</h3>
+            <p id="draw-reroll-badge" class="text-[11px] text-gray-500">今日已使用 1 / 3 次再抽一次</p>
+          </div>
+        </div>
+        <button id="btn-close-draw-modal" class="p-1 rounded-full text-gray-400 hover:text-gray-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- ================= 階段 1：卡堆待抽狀態 (Deck Stage) ================= -->
+      <div id="draw-deck-stage" class="py-5 flex flex-col items-center justify-center space-y-5 text-center relative">
+        
+        <!-- 背景金色旋轉光芒 -->
+        <div class="absolute w-56 h-56 -top-2 rounded-full bg-gradient-to-tr from-amber-300/30 to-brand-terracotta/20 blur-xl animate-ray-rotate pointer-events-none"></div>
+
+        <!-- 3D 疊放卡堆 (Card Stack) -->
+        <div id="interactive-card-deck" class="relative w-48 h-64 cursor-pointer animate-deck-float group">
+          <!-- 底層卡牌 1 (左展) -->
+          <div id="deck-fan-left" class="absolute inset-0 rounded-2xl draw-card-back-pattern transform -rotate-6 translate-y-1 shadow-md transition-transform duration-500 group-hover:-rotate-12 group-hover:-translate-x-3">
+            <div class="w-full h-full border border-dashed border-[#C59B27]/40 rounded-xl m-1 flex flex-col items-center justify-center p-3 text-center opacity-50">
+              <span class="text-[9px] text-brand-amber font-serif font-bold">CARE CIRCLE</span>
+              <span class="text-2xl my-1">🤍</span>
+              <span class="text-[9px] text-gray-500">照護圈</span>
+            </div>
+          </div>
+          <!-- 底層卡牌 2 (右展) -->
+          <div id="deck-fan-right" class="absolute inset-0 rounded-2xl draw-card-back-pattern transform rotate-6 translate-y-1 shadow-md transition-transform duration-500 group-hover:rotate-12 group-hover:translate-x-3">
+            <div class="w-full h-full border border-dashed border-[#C59B27]/40 rounded-xl m-1 flex flex-col items-center justify-center p-3 text-center opacity-50">
+              <span class="text-[9px] text-brand-amber font-serif font-bold">CARE CIRCLE</span>
+              <span class="text-2xl my-1">🤍</span>
+              <span class="text-[9px] text-gray-500">照護圈</span>
+            </div>
+          </div>
+          <!-- 頂層主卡牌 (照護圈手比心浮雕卡背) -->
+          <div id="deck-top-card" class="absolute inset-0 rounded-2xl draw-card-back-pattern shadow-xl flex flex-col items-center justify-between p-3.5 transform transition-transform duration-300 group-hover:scale-105 font-serif text-[#30261E]">
+            <div class="w-full border-b border-[#D6C8B4] pb-1 flex justify-between items-center text-[9px] text-brand-amber font-bold">
+              <span>CARE CIRCLE</span>
+              <span>照護圈</span>
+            </div>
+            
+            <div class="my-auto text-center space-y-1.5 flex flex-col items-center justify-center">
+              <div class="embossed-botanical-cameo w-24 h-24 text-brand-terracotta my-0.5">
+                <svg viewBox="0 0 100 100" class="embossed-svg-art stroke-current fill-none">
+                  <path d="M22 68 C16 52 18 36 28 24" stroke-width="1.6" stroke-linecap="round"/>
+                  <path d="M78 68 C84 52 82 36 72 24" stroke-width="1.6" stroke-linecap="round"/>
+                  <path d="M50 35 C43 23 30 22 24 33 C18 44 24 60 36 70 L50 82 L64 70 C76 60 82 44 76 33 C70 22 57 23 50 35 Z" 
+                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="#D97736" fill-opacity="0.18"/>
+                  <path d="M26 72 C28 62 33 54 39 48 C44 42 47 38 50 40 C53 38 56 42 61 48 C67 54 72 62 74 72" stroke-width="1.8" stroke-linecap="round"/>
+                  <circle cx="46" cy="46" r="4" stroke-width="1.8" fill="#FAF6ED" fill-opacity="0.95"/>
+                  <path d="M39 58 C39 52 42 50 46 50 C50 50 52 52 52 58" stroke-width="1.6" stroke-linecap="round" fill="#FAF6ED" fill-opacity="0.85"/>
+                  <circle cx="55" cy="44" r="3.6" stroke-width="1.8" fill="#FAF6ED" fill-opacity="0.95"/>
+                  <path d="M52 58 C52 51 55 49 59 49 C63 49 65 52 65 58" stroke-width="1.6" stroke-linecap="round" fill="#FAF6ED" fill-opacity="0.85"/>
+                  <circle cx="50" cy="20" r="1.5" fill="#C59B27"/>
+                  <circle cx="50" cy="88" r="1.5" fill="#C59B27"/>
+                </svg>
+              </div>
+              <p class="font-serif font-bold text-xs text-[#30261E] tracking-widest">今日命定靈感</p>
+              <p class="text-[10px] text-brand-terracotta">以愛守候 · 探索生活</p>
+            </div>
+
+            <div class="w-full border-t border-[#D6C8B4] pt-1 text-center">
+              <span class="text-[9px] text-brand-terracotta font-bold uppercase tracking-wider">TAP TO DRAW ↻</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 引導文字與大按鈕 -->
+        <div class="space-y-2">
+          <p class="text-xs font-medium text-gray-600">已為您綜合長輩偏好、今日氣候與體力指標！</p>
+          <button id="btn-trigger-draw-animation" class="py-2.5 px-6 bg-brand-terracotta hover:bg-brand-terracotta-dark text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95 flex items-center space-x-1.5 mx-auto animate-pulse-glow">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>點擊卡牌 · 翻開今日活動</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- ================= 階段 2：抽卡揭曉結果 (Revealed Card Stage) ================= -->
+      <div id="draw-result-stage" class="hidden space-y-3.5">
+        
+        <!-- 3D 抽中展示卡片 (翻出動效) -->
+        <div id="drawn-card-flip-box" class="perspective-container w-full h-[330px]">
+          <div id="drawn-card-inner" class="flip-card-inner is-flipped vintage-card-border rounded-2xl h-full shadow-lg">
+            
+            <!-- 卡背 (剛抽出來時之固定照護圈卡背：手比愛心 + 人物浮雕，與花語浮雕樣式一致) -->
+            <div class="flip-card-back p-4 draw-card-back-pattern flex flex-col justify-between items-center text-center font-serif text-[#30261E]">
+              <div class="w-full border-b border-[#D6C8B4] pb-1 flex justify-between items-center text-[10px] text-brand-amber font-bold">
+                <span class="tracking-wider">CARE CIRCLE</span>
+                <span class="font-sans text-[9px] text-gray-400">ALMANAC EMBLEM</span>
+                <span class="tracking-wider">照護圈</span>
+              </div>
+
+              <!-- 中央：雙手比心 + 中間人物立體浮雕勳章 -->
+              <div class="my-auto text-center space-y-2 flex flex-col items-center justify-center py-1">
+                <div class="embossed-botanical-cameo w-32 h-32 max-h-[135px] text-brand-terracotta shadow-md">
+                  <svg viewBox="0 0 100 100" class="embossed-svg-art stroke-current fill-none">
+                    <!-- 外圍植物橄欖枝藤蔓 (Botanical Laurel Vines) -->
+                    <path d="M22 68 C16 52 18 36 28 24" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M78 68 C84 52 82 36 72 24" stroke-width="1.6" stroke-linecap="round"/>
+                    
+                    <!-- 橄欖葉片 -->
+                    <path d="M22 58 C17 55 15 48 19 45 C22 48 23 54 22 58 Z" stroke-width="1.2" fill="#C59B27" fill-opacity="0.3"/>
+                    <path d="M24 44 C19 40 17 33 22 30 C25 33 25 39 24 44 Z" stroke-width="1.2" fill="#C59B27" fill-opacity="0.3"/>
+                    <path d="M29 30 C25 25 25 18 30 16 C33 20 32 26 29 30 Z" stroke-width="1.2" fill="#C59B27" fill-opacity="0.3"/>
+                    
+                    <path d="M78 58 C83 55 85 48 81 45 C78 48 77 54 78 58 Z" stroke-width="1.2" fill="#C59B27" fill-opacity="0.3"/>
+                    <path d="M76 44 C81 40 83 33 78 30 C75 33 75 39 76 44 Z" stroke-width="1.2" fill="#C59B27" fill-opacity="0.3"/>
+                    <path d="M71 30 C75 25 75 18 70 16 C67 20 68 26 71 30 Z" stroke-width="1.2" fill="#C59B27" fill-opacity="0.3"/>
+
+                    <!-- 雙手托抱比心主體 (Two Hands Forming Heart) -->
+                    <path d="M50 35 C43 23 30 22 24 33 C18 44 24 60 36 70 L50 82 L64 70 C76 60 82 44 76 33 C70 22 57 23 50 35 Z" 
+                          stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="#D97736" fill-opacity="0.18"/>
+                    
+                    <!-- 兩手手腕與大拇指手勢線條 (Hands & Fingers Gesture Details) -->
+                    <path d="M26 72 C28 62 33 54 39 48 C44 42 47 38 50 40 C53 38 56 42 61 48 C67 54 72 62 74 72" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M38 60 C42 67 46 74 50 78 C54 74 58 67 62 60" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2 1.5"/>
+
+                    <!-- 中心人物浮雕：長輩與陪伴家人溫馨相依 (Serene Figures Embossed in Center) -->
+                    <circle cx="46" cy="46" r="4.2" stroke-width="1.8" fill="#FAF6ED" fill-opacity="0.95"/>
+                    <path d="M39 58 C39 52 42 50 46 50 C50 50 52 52 52 58" stroke-width="1.6" stroke-linecap="round" fill="#FAF6ED" fill-opacity="0.85"/>
+                    
+                    <circle cx="55" cy="44" r="3.8" stroke-width="1.8" fill="#FAF6ED" fill-opacity="0.95"/>
+                    <path d="M52 58 C52 51 55 49 59 49 C63 49 65 52 65 58" stroke-width="1.6" stroke-linecap="round" fill="#FAF6ED" fill-opacity="0.85"/>
+
+                    <!-- 星芒守護光輝 (Starlight Accents) -->
+                    <circle cx="50" cy="20" r="1.5" fill="#C59B27"/>
+                    <circle cx="50" cy="88" r="1.5" fill="#C59B27"/>
+                    <line x1="50" y1="13" x2="50" y2="17" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="89" x2="50" y2="93" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </div>
+
+                <div class="space-y-0.5">
+                  <h4 class="font-bold text-xs text-[#2C241E] tracking-widest">照護圈 · 生活圖鑑</h4>
+                  <div class="inline-block bg-[#F4EDE0] px-3 py-0.5 rounded-full border border-[#D9CDB8]">
+                    <p class="text-[10px] font-bold text-brand-terracotta tracking-wider">
+                      以愛守候 · 探索日常
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="w-full border-t border-dashed border-[#D6C8B4] pt-1.5 flex items-center justify-between text-[10px] text-gray-400 font-sans">
+                <span class="text-brand-terracotta font-medium">翻開揭曉正面 ↻</span>
+                <span class="font-serif text-brand-amber font-bold">CARE EMBLEM</span>
+              </div>
+            </div>
+
+            <!-- 卡面 (揭曉正面) -->
+            <div class="flip-card-front bg-[#FAF6ED] p-4 flex flex-col justify-between text-left">
+              <div>
+                <div class="flex items-start justify-between border-b border-[#E8DFD3] pb-2">
+                  <span id="draw-act-category" class="bg-[#EFE9DE] text-[#2C241E] text-xs font-bold px-2.5 py-0.5 rounded-full">戶外・散步</span>
+                  <span id="draw-act-time" class="text-xs text-brand-terracotta font-semibold">建議時間：今日 15:30</span>
+                </div>
+
+                <div class="text-center py-2.5">
+                  <span id="draw-act-icon" class="text-4xl inline-block mb-1 transform hover:scale-110 transition">🌳</span>
+                  <h4 id="draw-act-title" class="text-lg font-bold text-[#2C241E]">大安森林公園綠意散步</h4>
+                  <p id="draw-act-location" class="text-xs text-gray-500 mt-0.5">📍 大安森林公園 (生態池步道)</p>
+                </div>
+
+                <!-- 推薦原因清單 -->
+                <div class="bg-white rounded-xl p-2.5 border border-[#E8DFD3] text-xs space-y-1">
+                  <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">推薦原因 (Why Today?)</div>
+                  <ul id="draw-act-reasons" class="space-y-0.5 text-gray-700 text-[11px]">
+                    <li>✓ 今日氣溫 24°C 微風宜人</li>
+                    <li>✓ 王奶奶最近 8 天未到戶外散步</li>
+                    <li>✓ 適合輕度關節伸展與放鬆</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="pt-1.5 border-t border-dashed border-[#D6C8B4] flex items-center justify-between text-[10px] text-gray-500">
+                <span class="text-brand-terracotta font-semibold">✨ 完美適配長輩身心狀態</span>
+                <span class="font-serif text-brand-amber font-bold">ALMANAC PICK</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 兩大主按鈕：就做這件事 vs 再抽一張 -->
+        <div class="space-y-2 pt-1">
+          <button id="btn-draw-accept" class="w-full py-3 bg-brand-terracotta hover:bg-brand-terracotta-dark text-white font-bold rounded-xl text-sm shadow-md transition flex items-center justify-center space-x-2 transform active:scale-95">
+            <span>今天就做這件事</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+
+          <div class="flex items-center space-x-2">
+            <button id="btn-draw-reroll" class="flex-1 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-xs border border-[#D6C8B4] transition flex items-center justify-center space-x-1 shadow-2xs">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-brand-terracotta"></i>
+              <span>再抽一張 (<span id="reroll-remain-num">2</span> 次剩餘)</span>
+            </button>
+            
+            <button id="btn-draw-settings-open" class="py-2 px-3 bg-[#EFE9DE] hover:bg-[#E5DDD0] text-[#2C241E] font-semibold rounded-xl text-xs transition" title="抽卡偏好設定">
+              <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 3: 🤝 今天誰陪？選擇路徑 Modal
+       ======================================================================== -->
+  <div id="modal-who-accompany" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-md rounded-3xl p-5 border border-[#E8DFD3] shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-[#E8DFD3] pb-2.5">
+        <div>
+          <h3 class="font-bold text-base text-[#2C241E]">今天誰陪？</h3>
+          <p id="who-accompany-subtitle" class="text-xs text-gray-500">已選定活動：大安森林公園綠意散步</p>
+        </div>
+        <button id="btn-close-who-modal" class="p-1 rounded-full text-gray-400 hover:text-gray-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-gray-600">請選擇由家庭親自陪伴，或是委託社區認證之專業照護夥伴：</p>
+
+      <div class="space-y-3">
+        <!-- 路徑 A: 我和家人陪 -->
+        <button id="btn-choose-family-path" class="w-full text-left p-4 rounded-2xl border-2 border-[#E8DFD3] hover:border-brand-terracotta bg-[#FAF6ED] transition flex items-center justify-between group">
+          <div class="flex items-center space-x-3">
+            <span class="text-3xl p-2 bg-white rounded-xl shadow-2xs">🏠</span>
+            <div>
+              <h4 class="font-bold text-sm text-[#2C241E] group-hover:text-brand-terracotta">我和家人陪</h4>
+              <p class="text-xs text-gray-500 mt-0.5">直接建立 Activity 排程，家人現場陪伴並拍照解鎖生活圖鑑卡。</p>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400 group-hover:text-brand-terracotta"></i>
+        </button>
+
+        <!-- 路徑 B: 找照護夥伴 -->
+        <button id="btn-choose-caregiver-path" class="w-full text-left p-4 rounded-2xl border-2 border-[#E8DFD3] hover:border-brand-sage bg-[#F4F7F5] transition flex items-center justify-between group">
+          <div class="flex items-center space-x-3">
+            <span class="text-3xl p-2 bg-white rounded-xl shadow-2xs">🤝</span>
+            <div>
+              <h4 class="font-bold text-sm text-[#2C241E] group-hover:text-brand-sage">找照護夥伴 (Care Request)</h4>
+              <p class="text-xs text-gray-500 mt-0.5">發布需求由平台審核良民證夥伴接單，完成履約後同樣生成專屬紀念卡。</p>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400 group-hover:text-brand-sage"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 4: 👵 選擇照護對象與切換 Modal (長輩 / 幼兒雙向切換)
+       ======================================================================== -->
+  <div id="modal-select-recipient" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-md rounded-3xl p-5 border border-[#E8DFD3] shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-[#E8DFD3] pb-2.5">
+        <div>
+          <h3 class="font-bold text-base text-[#2C241E]">切換照顧對象</h3>
+          <p class="text-xs text-gray-500">支援長輩照護圈與幼兒照護圈隨選切換</p>
+        </div>
+        <button id="btn-close-recipient-modal" class="p-1 rounded-full text-gray-400 hover:text-gray-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="recipients-selection-list" class="space-y-2 max-h-72 overflow-y-auto">
+        <!-- 動態載入對象 -->
+      </div>
+
+      <button id="btn-open-add-recipient-modal" class="w-full py-2.5 bg-[#FAF6ED] hover:bg-[#F3ECE0] text-brand-terracotta border border-dashed border-brand-terracotta/40 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 transition">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>新增照護對象 (長輩或幼兒)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       DRAWER: 🤖 AI 照護協作員「小照」對話抽屜
+       ======================================================================== -->
+  <div id="drawer-ai-assistant" class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl border-l border-[#E8DFD3] flex flex-col justify-between transform translate-x-full transition-transform duration-300">
+    <!-- AI Drawer Header -->
+    <div class="p-4 border-b border-[#E8DFD3] flex items-center justify-between bg-[#FAF6ED]">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-9 h-9 rounded-full bg-brand-terracotta text-white flex items-center justify-center text-lg shadow-xs">
+          🤖
+        </div>
+        <div>
+          <h3 class="font-bold text-sm text-[#2C241E]">AI 照護協作員 · 小照</h3>
+          <p class="text-[10px] text-gray-500">以長輩生活為核心的智慧管家</p>
+        </div>
+      </div>
+      <button id="btn-close-ai" class="p-1.5 rounded-full hover:bg-gray-200 text-gray-500">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- AI 對話訊息紀錄 -->
+    <div id="ai-chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+      <div class="flex items-start space-x-2">
+        <span class="text-xl">🤖</span>
+        <div class="bg-[#FAF6ED] p-3 rounded-2xl rounded-tl-none border border-[#EADFCF] text-[#2C241E] max-w-[85%] leading-relaxed">
+          您好！我是小照。今天可以幫您推薦適合長輩或幼兒的活動、由一句話快速建立活動或照護需求，或是為您整理本週家庭交班摘要。有什麼想了解的嗎？
+        </div>
+      </div>
+    </div>
+
+    <!-- AI 快捷提示詞按鈕 -->
+    <div class="px-4 py-2 bg-gray-50 border-t border-[#E8DFD3] flex space-x-1.5 overflow-x-auto scrollbar-none text-[11px]">
+      <button class="ai-prompt-chip bg-white border border-[#D6C8B4] hover:border-brand-terracotta px-2.5 py-1 rounded-full whitespace-nowrap text-gray-700">
+        🎴 今天王奶奶可以做什麼？
+      </button>
+      <button class="ai-prompt-chip bg-white border border-[#D6C8B4] hover:border-brand-terracotta px-2.5 py-1 rounded-full whitespace-nowrap text-gray-700">
+        📅 明天下午想陪媽媽買菜
+      </button>
+      <button class="ai-prompt-chip bg-white border border-[#D6C8B4] hover:border-brand-terracotta px-2.5 py-1 rounded-full whitespace-nowrap text-gray-700">
+        🤝 找人週三陪媽媽回診
+      </button>
+      <button class="ai-prompt-chip bg-white border border-[#D6C8B4] hover:border-brand-terracotta px-2.5 py-1 rounded-full whitespace-nowrap text-gray-700">
+        📊 整理本週生活交班摘要
+      </button>
+    </div>
+
+    <!-- AI 輸入框 -->
+    <div class="p-3 border-t border-[#E8DFD3] bg-white flex items-center space-x-2">
+      <input id="ai-input-text" type="text" placeholder="輸入想問的問題，或口語說出安排..." class="flex-1 border border-[#D6C8B4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-terracotta">
+      <button id="btn-ai-send" class="p-2 bg-brand-terracotta text-white rounded-xl hover:bg-brand-terracotta-dark transition">
+        <i data-lucide="send" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast 提示組件 -->
+  <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none space-y-2"></div>
+
+  <!-- 引入主模組與核心邏輯 (app.bundle.js 支援 file:// 與 http:// 零跨域限制) -->
+  <script src="app.bundle.js?v=3"></script>
+</body>
+</html>
