@@ -2589,58 +2589,60 @@ class CareCircleApp {
     // 今日誰陪狀態卡
     this.companionFamilyName.textContent = `女兒 ${store.state.currentUser.name}`;
 
-    // 今日活動清單
-    const todayStr = '2026-09-12';
-    const todayActs = store.state.activities.filter(a => a.recipientId === rec.id || a.scheduledDate === todayStr);
-    
-    if (todayActs.length === 0) {
-      this.homeTodayActivitiesList.innerHTML = `
-        <div class="text-center py-6 text-gray-400 text-xs">
-          <p>📅 今日尚未排定任何陪伴活動</p>
-          <button id="btn-home-quick-draw" class="mt-2 text-brand-terracotta font-bold hover:underline">
-            點此抽一張，給長輩一個期待 →
-          </button>
-        </div>
-      `;
-      document.getElementById('btn-home-quick-draw')?.addEventListener('click', () => this.openDrawCardModal());
-    } else {
-      this.homeTodayActivitiesList.innerHTML = todayActs.map(act => {
-        let badge = '<span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">排程中</span>';
-        if (act.status === 'COMPLETED') badge = '<span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">已完成</span>';
-        if (act.status === 'IN_PROGRESS') badge = '<span class="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium animate-pulse">進行中</span>';
-
-        return `
-          <div class="p-3 bg-[#FAF6ED] rounded-xl border border-[#E8DFD3] flex items-center justify-between">
-            <div class="space-y-0.5">
-              <div class="flex items-center space-x-2">
-                <span class="font-bold text-xs text-[#2C241E]">${act.title}</span>
-                ${badge}
-              </div>
-              <p class="text-[11px] text-gray-500">🕒 ${act.scheduledTime} · 📍 ${act.location}</p>
-              <p class="text-[10px] text-gray-400">陪伴人：${act.leadCompanion}</p>
-            </div>
-            <div class="flex items-center space-x-1.5">
-              ${act.status !== 'COMPLETED' ? `
-                <button class="btn-quick-finish text-xs bg-brand-terracotta text-white font-bold px-2.5 py-1.5 rounded-lg shadow-2xs hover:bg-brand-terracotta-dark" data-act-id="${act.id}">
-                  完成陪伴
-                </button>
-              ` : `
-                <button class="btn-view-card-from-act text-xs bg-white text-gray-700 border border-[#D6C8B4] font-medium px-2 py-1 rounded-lg" data-card-id="${act.cardId}">
-                  查看卡片
-                </button>
-              `}
-            </div>
+    // 今日活動清單 (若頁面存在該容器時才渲染)
+    if (this.homeTodayActivitiesList) {
+      const todayStr = '2026-09-12';
+      const todayActs = store.state.activities.filter(a => a.recipientId === rec.id || a.scheduledDate === todayStr);
+      
+      if (todayActs.length === 0) {
+        this.homeTodayActivitiesList.innerHTML = `
+          <div class="text-center py-6 text-gray-400 text-xs">
+            <p>📅 今日尚未排定任何陪伴活動</p>
+            <button id="btn-home-quick-draw" class="mt-2 text-brand-terracotta font-bold hover:underline">
+              點此抽一張，給長輩一個期待 →
+            </button>
           </div>
         `;
-      }).join('');
+        document.getElementById('btn-home-quick-draw')?.addEventListener('click', () => this.openDrawCardModal());
+      } else {
+        this.homeTodayActivitiesList.innerHTML = todayActs.map(act => {
+          let badge = '<span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">排程中</span>';
+          if (act.status === 'COMPLETED') badge = '<span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">已完成</span>';
+          if (act.status === 'IN_PROGRESS') badge = '<span class="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium animate-pulse">進行中</span>';
 
-      // 綁定按鈕事件
-      this.homeTodayActivitiesList.querySelectorAll('.btn-quick-finish').forEach(b => {
-        b.addEventListener('click', () => this.completeActivityFlow(b.dataset.actId));
-      });
-      this.homeTodayActivitiesList.querySelectorAll('.btn-view-card-from-act').forEach(b => {
-        b.addEventListener('click', () => this.openCardModal(b.dataset.cardId));
-      });
+          return `
+            <div class="p-3 bg-[#FAF6ED] rounded-xl border border-[#E8DFD3] flex items-center justify-between">
+              <div class="space-y-0.5">
+                <div class="flex items-center space-x-2">
+                  <span class="font-bold text-xs text-[#2C241E]">${act.title}</span>
+                  ${badge}
+                </div>
+                <p class="text-[11px] text-gray-500">🕒 ${act.scheduledTime} · 📍 ${act.location}</p>
+                <p class="text-[10px] text-gray-400">陪伴人：${act.leadCompanion}</p>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                ${act.status !== 'COMPLETED' ? `
+                  <button class="btn-quick-finish text-xs bg-brand-terracotta text-white font-bold px-2.5 py-1.5 rounded-lg shadow-2xs hover:bg-brand-terracotta-dark" data-act-id="${act.id}">
+                    完成陪伴
+                  </button>
+                ` : `
+                  <button class="btn-view-card-from-act text-xs bg-white text-gray-700 border border-[#D6C8B4] font-medium px-2 py-1 rounded-lg" data-card-id="${act.cardId}">
+                    查看卡片
+                  </button>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // 綁定按鈕事件
+        this.homeTodayActivitiesList.querySelectorAll('.btn-quick-finish').forEach(b => {
+          b.addEventListener('click', () => this.completeActivityFlow(b.dataset.actId));
+        });
+        this.homeTodayActivitiesList.querySelectorAll('.btn-view-card-from-act').forEach(b => {
+          b.addEventListener('click', () => this.openCardModal(b.dataset.cardId));
+        });
+      }
     }
 
     // 最近完成的活動卡輪播 (若頁面存在該容器時才渲染)
