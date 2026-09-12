@@ -48,17 +48,38 @@
   <header class="sticky top-0 z-40 bg-[#FDFBF7]/95 backdrop-blur-md border-b border-[#E8DFD3] px-4 py-3 shadow-xs">
     <div class="max-w-2xl mx-auto flex items-center justify-between">
       
-      <!-- 照護對象切換器 (長輩 / 幼兒) -->
-      <button id="btn-recipient-selector" class="flex items-center space-x-2 bg-white px-3.5 py-1.5 rounded-full border border-[#E8DFD3] hover:border-[#D97736] transition shadow-xs">
-        <span id="header-recipient-avatar" class="text-xl">👵</span>
-        <div class="text-left">
-          <div class="flex items-center space-x-1.5">
-            <span id="header-recipient-name" class="font-bold text-sm text-[#2C241E]">王奶奶</span>
-            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500"></i>
+      <!-- 照護對象切換器 (長輩 / 幼兒) 下拉選單 -->
+      <div class="relative">
+        <button id="btn-recipient-selector" class="flex items-center space-x-2 bg-white px-3.5 py-1.5 rounded-full border border-[#E8DFD3] hover:border-[#D97736] transition shadow-xs">
+          <span id="header-recipient-avatar" class="text-xl">👵</span>
+          <div class="text-left">
+            <div class="flex items-center space-x-1.5">
+              <span id="header-recipient-name" class="font-bold text-sm text-[#2C241E]">王奶奶</span>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform" id="recipient-dropdown-arrow"></i>
+            </div>
+            <span id="header-recipient-type-badge" class="text-[10px] text-brand-terracotta bg-[#FBEFE6] px-1.5 py-0.2 rounded-sm font-medium">長輩照護圈 · 82歲</span>
           </div>
-          <span id="header-recipient-type-badge" class="text-[10px] text-brand-terracotta bg-[#FBEFE6] px-1.5 py-0.2 rounded-sm font-medium">長輩照護圈 · 82歲</span>
+        </button>
+
+        <!-- 左上方對象切換下拉清單 (Dropdown Menu) -->
+        <div id="menu-recipient-dropdown" class="absolute left-0 mt-2 w-72 bg-white rounded-2xl border border-[#E8DFD3] shadow-xl py-2 z-50 hidden transition-all">
+          <div class="px-3 py-1 border-b border-[#E8DFD3] mb-1 flex items-center justify-between">
+            <span class="text-[10px] font-bold text-gray-400">切換照護對象 (長輩 / 幼兒)</span>
+            <span class="text-[9px] text-brand-terracotta font-medium">即時聚焦個人紀錄</span>
+          </div>
+          
+          <div id="recipient-dropdown-items-container" class="space-y-1 px-1">
+            <!-- 動態載入對象選項 -->
+          </div>
+
+          <div class="border-t border-[#E8DFD3] mt-1 pt-1 px-2">
+            <button id="btn-open-add-recipient-from-dropdown" class="w-full py-1.5 text-left text-xs text-brand-terracotta hover:bg-[#FAF6ED] rounded-xl px-2.5 font-bold flex items-center space-x-1.5 transition">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>新增照護對象 (長輩或幼兒)...</span>
+            </button>
+          </div>
         </div>
-      </button>
+      </div>
 
       <!-- 右側：身分切換標籤與快捷操作 -->
       <div class="flex items-center space-x-2">
@@ -327,7 +348,7 @@
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-xl font-bold text-[#2C241E]">生活圖鑑與回憶</h2>
-          <p class="text-xs text-gray-500">珍藏長輩日常的每一朵花語與生活故事</p>
+          <p id="collection-tab-subtitle" class="text-xs text-gray-500">珍藏長輩日常的每一朵花語與生活故事</p>
         </div>
         <!-- 檢視切換：生活圖鑑 vs 回憶冊 -->
         <div class="flex bg-[#EFE9DE] p-1 rounded-xl text-xs font-bold">
@@ -336,14 +357,13 @@
         </div>
       </div>
 
-      <!-- 篩選列 -->
+      <!-- 篩選列：刪除重複的下層對象選單，顯示當前選定對象標籤與四季過濾 -->
       <div id="collection-filter-bar" class="flex items-center space-x-2 overflow-x-auto pb-1 text-xs">
-        <select id="select-card-recipient" class="bg-white border border-[#E8DFD3] rounded-lg px-2.5 py-1 text-[#2C241E]">
-          <option value="ALL">全部對象</option>
-          <option value="rec-001">王奶奶</option>
-          <option value="rec-002">王爺爺</option>
-          <option value="rec-004">小宇 (幼兒)</option>
-        </select>
+        <div id="collection-active-recipient-indicator" class="flex items-center space-x-1.5 bg-[#FAF0E1] text-brand-terracotta border border-[#E8DFD3] px-2.5 py-1 rounded-lg font-bold shrink-0">
+          <span id="collection-recipient-avatar">👵</span>
+          <span id="collection-recipient-name">王奶奶</span>
+          <span class="text-[10px] bg-brand-terracotta/10 px-1 py-0.2 rounded font-normal">已聚焦個人紀錄</span>
+        </div>
 
         <select id="select-card-season" class="bg-white border border-[#E8DFD3] rounded-lg px-2.5 py-1 text-[#2C241E]">
           <option value="ALL">四季花語 (全部)</option>
@@ -352,6 +372,8 @@
           <option value="秋季">金秋桂杏</option>
           <option value="冬季">冬日山茶</option>
         </select>
+
+        <span id="collection-cards-count-badge" class="text-xs text-gray-400 ml-auto shrink-0 font-medium">已累積 4 張紀念卡</span>
       </div>
 
       <!-- 視圖 A: 生活圖鑑網格 (Stamp Grid) -->
@@ -1323,6 +1345,6 @@
   <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none space-y-2"></div>
 
   <!-- 引入主模組與核心邏輯 (app.bundle.js 支援 file:// 與 http:// 零跨域限制) -->
-  <script src="app.bundle.js?v=1.1.0"></script>
+  <script src="app.bundle.js?v=1.2.0"></script>
 </body>
 </html>

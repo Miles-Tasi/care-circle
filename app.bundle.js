@@ -1080,6 +1080,76 @@ const INITIAL_DATA = {
       mode: 'FAMILY',
       careRequestId: null,
       photos: []
+    },
+    {
+      id: 'act-008',
+      recipientId: 'rec-002',
+      title: '王爺爺書房幽蘭墨香水墨課',
+      category: '文藝・陶冶',
+      scheduledDate: '2026-08-10',
+      scheduledTime: '10:00–11:00',
+      location: '自家書房書法桌',
+      leadCompanion: '孫子 小宇',
+      coParticipants: ['小敏'],
+      notes: '爺爺握著小宇肉嘟嘟的小手教他勾勒幽蘭葉片，墨香在書房靜靜飄散。',
+      status: 'COMPLETED',
+      mode: 'FAMILY',
+      careRequestId: null,
+      photos: ['https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&auto=format&fit=crop&q=80'],
+      completedAt: '2026-08-10 11:15',
+      cardId: 'card-008'
+    },
+    {
+      id: 'act-009',
+      recipientId: 'rec-002',
+      title: '大安公園太極八段錦晨練',
+      category: '健康・伸展',
+      scheduledDate: '2026-09-11',
+      scheduledTime: '07:30–08:15',
+      location: '大安森林公園太極廣場',
+      leadCompanion: '兒子 王大偉',
+      coParticipants: [],
+      notes: '清晨微風下，爺爺在老榕樹旁打了一整套八段錦，神采奕奕，呼吸平穩。',
+      status: 'COMPLETED',
+      mode: 'FAMILY',
+      careRequestId: null,
+      photos: ['https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80'],
+      completedAt: '2026-09-11 08:30',
+      cardId: 'card-009'
+    },
+    {
+      id: 'act-010',
+      recipientId: 'rec-002',
+      title: '信義老茶行挑選高山烏龍春茶',
+      category: '休閒・品茗',
+      scheduledDate: '2026-09-12',
+      scheduledTime: '16:00–17:00',
+      location: '信義路二段百年茶行',
+      leadCompanion: '女兒 王小敏',
+      coParticipants: [],
+      notes: '陪同長輩試聞不同烘焙度茶葉香氣，挑選適合每日飯後熱泡的高山茶。',
+      status: 'SCHEDULED',
+      mode: 'FAMILY',
+      careRequestId: null,
+      photos: []
+    },
+    {
+      id: 'act-011',
+      recipientId: 'rec-004',
+      title: '大自然彩葉拼貼翼龍創想',
+      category: '幼兒・藝術手作',
+      scheduledDate: '2026-09-09',
+      scheduledTime: '15:30–16:30',
+      location: '社區兒童遊戲室',
+      leadCompanion: '媽媽 王小敏',
+      coParticipants: ['爺爺'],
+      notes: '在公園撿拾落葉拼出超級大暴龍，小宇開心得手舞足蹈！',
+      status: 'COMPLETED',
+      mode: 'FAMILY',
+      careRequestId: null,
+      photos: ['https://images.unsplash.com/photo-1473448912268-2022ce9509d8?w=600&auto=format&fit=crop&q=80'],
+      completedAt: '2026-09-09 16:40',
+      cardId: 'card-010'
     }
   ],
 
@@ -1227,6 +1297,78 @@ const INITIAL_DATA = {
       participants: ['王爺爺', '孫子 小宇'],
       notes: '爺爺握著小宇肉嘟嘟的小手一筆一劃教他勾勒幽蘭葉片，墨香在書房靜靜飄散，文化與親情在筆尖無聲傳承。',
       metrics: '時長 45 分鐘・作品收藏至生活誌',
+      privacy: 'FAMILY_ONLY'
+    },
+    {
+      id: 'card-009',
+      activityId: 'act-009',
+      recipientId: 'rec-002',
+      cardNumber: 'NO. 2026-0911',
+      title: '大安公園太極八段錦晨練',
+      category: '健康・伸展',
+      dateStr: '2026.09.11',
+      season: '秋季',
+      themeType: 'FLOWER',
+      flowerKey: 'GINKGO',
+      coverPhoto: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+      complimentTag: '堅韌長青・步履穩健',
+      participants: ['王爺爺', '兒子 大偉'],
+      notes: '清晨微風下，爺爺在老榕樹旁打了一整套八段錦，氣定神閒，呼吸綿長。',
+      metrics: '時長 45 分鐘・晨練步數 1,800 步',
+      privacy: 'FAMILY_ONLY'
+    },
+    {
+      id: 'card-010',
+      activityId: 'act-011',
+      recipientId: 'rec-004',
+      cardNumber: 'NO. 2026-0909',
+      title: '大自然彩葉拼貼翼龍創想',
+      category: '幼兒・藝術手作',
+      dateStr: '2026.09.09',
+      season: '秋季',
+      themeType: 'FLOWER',
+      flowerKey: 'DANDELION',
+      coverPhoto: 'https://images.unsplash.com/photo-1473448912268-2022ce9509d8?w=600&auto=format&fit=crop&q=80',
+      complimentTag: '探索無限・童心飛揚',
+      participants: ['小宇 (4歲)', '媽媽 小敏'],
+      notes: '用撿拾的黃紅落葉拼貼出一隻大暴龍，小宇興奮地展示給爺爺奶奶看！',
+      metrics: '手作時長 45 分鐘・作品收藏至生活誌',
+      privacy: 'FAMILY_ONLY'
+    },
+    {
+      id: 'card-011',
+      activityId: 'act-today-afternoon',
+      recipientId: 'rec-006',
+      cardNumber: 'NO. 2026-0912',
+      title: '社區林蔭漫步與花草辨識',
+      category: '社區・夥伴陪伴',
+      dateStr: '2026.09.12',
+      season: '秋季',
+      themeType: 'FLOWER',
+      flowerKey: 'CHRYSANTHEMUM',
+      coverPhoto: 'https://images.unsplash.com/photo-1516205651411-aef33a44f7c2?w=600&auto=format&fit=crop&q=80',
+      complimentTag: '秋菊清幽・安康長樂',
+      participants: ['林爺爺 (78歲)', '照護夥伴 小敏'],
+      notes: '陪林爺爺在建國南路林蔭大道散步，沿路辨識秋菊與紫微，爺爺精神抖擻，心情開朗。',
+      metrics: '時長 40 分鐘・步行 1,500 步',
+      privacy: 'FAMILY_ONLY'
+    },
+    {
+      id: 'card-012',
+      activityId: 'act-007',
+      recipientId: 'rec-003',
+      cardNumber: 'NO. 2026-0905',
+      title: '中庭花園香草巡禮與芳療薄荷茶',
+      category: '園藝・感官舒緩',
+      dateStr: '2026.09.05',
+      season: '秋季',
+      themeType: 'FLOWER',
+      flowerKey: 'JASMINE',
+      coverPhoto: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=600&auto=format&fit=crop&q=80',
+      complimentTag: '茉莉清芳・怡然自得',
+      participants: ['林阿姨 (68歲)', '外甥女 小敏'],
+      notes: '陪林阿姨在中庭摘採新鮮薄荷與茉莉花瓣泡茶，清涼提神，阿姨直誇身心都放鬆了。',
+      metrics: '時長 35 分鐘・血壓放鬆 118/75',
       privacy: 'FAMILY_ONLY'
     }
   ],
@@ -1548,7 +1690,7 @@ class ConfettiParticleSystem {
 // ============================================================================
 // 1. 狀態管理 (State Management with LocalStorage)
 // ============================================================================
-const STORAGE_KEY = 'CARE_CIRCLE_STATE_V4';
+const STORAGE_KEY = 'CARE_CIRCLE_STATE_V5';
 
 class Store {
   constructor() {
@@ -1562,13 +1704,15 @@ class Store {
       if (cached) {
         return JSON.parse(cached);
       }
-      // 平滑升級：若有 V3 舊快取，繼承其申請狀態與選定成員
-      const v3Cached = localStorage.getItem('CARE_CIRCLE_STATE_V3');
-      if (v3Cached) {
-        const parsed = JSON.parse(v3Cached);
+      // 平滑升級：若有 V4 舊快取，繼承其申請狀態、上傳檔案與選定成員
+      const v4Cached = localStorage.getItem('CARE_CIRCLE_STATE_V4');
+      if (v4Cached) {
+        const parsed = JSON.parse(v4Cached);
         const initial = JSON.parse(JSON.stringify(INITIAL_DATA));
         if (parsed.caregiverApplication) initial.caregiverApplication = parsed.caregiverApplication;
+        if (parsed.caregiverUploadedFiles) initial.caregiverUploadedFiles = parsed.caregiverUploadedFiles;
         if (parsed.activeRecipientId) initial.activeRecipientId = parsed.activeRecipientId;
+        if (parsed.currentUser) initial.currentUser = parsed.currentUser;
         return initial;
       }
     } catch (e) {
@@ -1658,6 +1802,10 @@ class CareCircleApp {
     this.headerName = document.getElementById('header-recipient-name');
     this.headerTypeBadge = document.getElementById('header-recipient-type-badge');
     this.btnRecipientSelector = document.getElementById('btn-recipient-selector');
+    this.menuRecipientDropdown = document.getElementById('menu-recipient-dropdown');
+    this.recipientDropdownArrow = document.getElementById('recipient-dropdown-arrow');
+    this.recipientDropdownItemsContainer = document.getElementById('recipient-dropdown-items-container');
+    this.btnOpenAddRecipientFromDropdown = document.getElementById('btn-open-add-recipient-from-dropdown');
     this.btnToggleRole = document.getElementById('btn-toggle-role');
     this.roleBadgeIcon = document.getElementById('role-badge-icon');
     this.roleBadgeText = document.getElementById('role-badge-text');
@@ -1713,8 +1861,11 @@ class CareCircleApp {
     this.btnSubtabMemorybook = document.getElementById('btn-subtab-memorybook');
     this.viewCollectionGrid = document.getElementById('view-collection-grid');
     this.viewMemoryBook = document.getElementById('view-memory-book');
-    this.selectCardRecipient = document.getElementById('select-card-recipient');
     this.selectCardSeason = document.getElementById('select-card-season');
+    this.collectionRecipientAvatar = document.getElementById('collection-recipient-avatar');
+    this.collectionRecipientName = document.getElementById('collection-recipient-name');
+    this.collectionCardsCountBadge = document.getElementById('collection-cards-count-badge');
+    this.collectionTabSubtitle = document.getElementById('collection-tab-subtitle');
 
     // 我的 Tab Elements
     this.btnSwitchRoleProminent = document.getElementById('btn-switch-role-prominent');
@@ -1828,11 +1979,15 @@ class CareCircleApp {
       });
     });
 
-    // 點選頁面外部關閉下拉選單
+    // 點選頁面外部關閉下拉選單 (角色切換與照護對象切換)
     document.addEventListener('click', (e) => {
       if (!this.btnToggleRole?.contains(e.target) && !this.menuRoleDropdown?.contains(e.target)) {
         this.menuRoleDropdown?.classList.add('hidden');
         this.roleDropdownArrow?.classList.remove('rotate-180');
+      }
+      if (!this.btnRecipientSelector?.contains(e.target) && !this.menuRecipientDropdown?.contains(e.target)) {
+        this.menuRecipientDropdown?.classList.add('hidden');
+        this.recipientDropdownArrow?.classList.remove('rotate-180');
       }
     });
 
@@ -1865,12 +2020,20 @@ class CareCircleApp {
       }
     });
 
-    // 照護對象選擇器
-    this.btnRecipientSelector.addEventListener('click', () => {
-      this.openRecipientModal();
+    // 照護對象切換器 (支援頂部下拉選單與彈窗切換)
+    this.btnRecipientSelector.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.renderRecipientDropdownItems();
+      this.menuRecipientDropdown?.classList.toggle('hidden');
+      this.recipientDropdownArrow?.classList.toggle('rotate-180');
     });
     this.btnCloseRecipientModal.addEventListener('click', () => {
       this.modalSelectRecipient.classList.add('hidden');
+    });
+    this.btnOpenAddRecipientFromDropdown?.addEventListener('click', () => {
+      this.menuRecipientDropdown?.classList.add('hidden');
+      this.recipientDropdownArrow?.classList.remove('rotate-180');
+      this.promptAddRecipient();
     });
 
     // 新增照護對象
@@ -1970,8 +2133,7 @@ class CareCircleApp {
       this.renderMemoryBook();
     });
 
-    this.selectCardRecipient.addEventListener('change', () => this.renderCollectionCards());
-    this.selectCardSeason.addEventListener('change', () => this.renderCollectionCards());
+    this.selectCardSeason?.addEventListener('change', () => this.renderCollectionCards());
 
     // 3D 卡片 Modal
     this.btnCloseCardModal.addEventListener('click', () => {
@@ -2597,10 +2759,14 @@ class CareCircleApp {
     }
 
     // 渲染各模組
+    this.renderRecipientDropdownItems();
     this.renderMasterKanban();
     this.renderHome();
     this.renderActivities(this.currentActivityFilter || 'ALL');
     this.renderCollectionCards();
+    if (this.currentSubTab === 'memorybook') {
+      this.renderMemoryBook();
+    }
     this.renderMyWorkspace();
     this.updateCaregiverBannerState();
 
@@ -2898,22 +3064,35 @@ class CareCircleApp {
   // 7. 生活圖鑑模組渲染 (Collection & Memory Book)
   // ==========================================================================
   renderCollectionCards() {
-    const selectedRecId = this.selectCardRecipient.value;
-    const selectedSeason = this.selectCardSeason.value;
+    const activeRec = store.getActiveRecipient();
+    const selectedSeason = this.selectCardSeason ? this.selectCardSeason.value : 'ALL';
 
-    let cards = [...store.state.activityCards];
-    if (selectedRecId !== 'ALL') {
-      cards = cards.filter(c => c.recipientId === selectedRecId);
+    if (this.collectionRecipientAvatar) this.collectionRecipientAvatar.textContent = activeRec.avatar;
+    if (this.collectionRecipientName) this.collectionRecipientName.textContent = activeRec.name;
+    if (this.collectionTabSubtitle) {
+      const typeLabel = activeRec.type === 'CHILD' ? '幼兒' : '長輩';
+      this.collectionTabSubtitle.innerHTML = `珍藏 <strong class="text-brand-terracotta">${activeRec.avatar} ${activeRec.name}</strong> (${typeLabel} · ${activeRec.relationship}) 的每一朵花語與生活故事 <span class="ml-1 text-[10px] bg-brand-terracotta/10 text-brand-terracotta px-1.5 py-0.5 rounded font-medium">🎯 已聚焦個人紀錄</span>`;
     }
+
+    let cards = store.state.activityCards.filter(c => c.recipientId === activeRec.id);
     if (selectedSeason !== 'ALL') {
-      cards = cards.filter(c => c.season.includes(selectedSeason));
+      cards = cards.filter(c => c.season && c.season.includes(selectedSeason));
+    }
+
+    if (this.collectionCardsCountBadge) {
+      this.collectionCardsCountBadge.textContent = `已累積 ${cards.length} 張生活活動卡`;
     }
 
     if (cards.length === 0) {
       this.viewCollectionGrid.innerHTML = `
-        <div class="col-span-2 text-center py-16 bg-white rounded-2xl border border-dashed border-[#E8DFD3] text-gray-400 text-xs">
-          🎴 尚無符合條件的生活活動卡<br>
-          <span class="text-gray-300">完成日常陪伴即可收集專屬花語！</span>
+        <div class="col-span-2 text-center py-16 bg-white rounded-2xl border border-dashed border-[#E8DFD3] text-gray-400 text-xs space-y-3">
+          <div class="w-12 h-12 mx-auto bg-[#FAF6ED] rounded-full flex items-center justify-center text-2xl border border-[#E8DFD3]">
+            ${activeRec.avatar}
+          </div>
+          <div>
+            <p class="font-bold text-sm text-[#2C241E]">目前「${activeRec.name}」尚無符合條件的生活活動卡</p>
+            <p class="text-[11px] text-gray-400 mt-1">系統已自動聚焦 ${activeRec.name} 的個人紀錄，完成日常陪伴即可解鎖專屬花語！</p>
+          </div>
         </div>
       `;
       return;
@@ -2921,7 +3100,7 @@ class CareCircleApp {
 
     this.viewCollectionGrid.innerHTML = cards.map(c => {
       const flower = FLOWER_THEMES[c.flowerKey] || FLOWER_THEMES.DAISY;
-      const rec = store.state.recipients.find(r => r.id === c.recipientId);
+      const rec = store.state.recipients.find(r => r.id === c.recipientId) || activeRec;
 
       return `
         <div class="vintage-card-border rounded-2xl p-3 bg-[#FAF6ED] cursor-pointer hover:shadow-lg transition transform hover:-translate-y-1 group card-grid-item" data-card-id="${c.id}">
@@ -2941,7 +3120,7 @@ class CareCircleApp {
               <p class="text-[10px] text-brand-terracotta line-clamp-1 font-serif mt-0.5">${flower.language}</p>
             </div>
             <div class="pt-1.5 border-t border-dashed border-[#D6C8B4] flex items-center justify-between text-[10px] text-gray-500">
-              <span>${rec ? rec.name : '長輩'}</span>
+              <span class="font-medium text-[#2C241E]">${rec.avatar} ${rec.name}</span>
               <span class="text-brand-terracotta font-semibold group-hover:underline">3D 翻面 ↻</span>
             </div>
           </div>
@@ -3560,6 +3739,54 @@ class CareCircleApp {
   // ==========================================================================
   // 13. 照護對象管理 (Elderly & Child Switch & Add)
   // ==========================================================================
+  renderRecipientDropdownItems() {
+    if (!this.recipientDropdownItemsContainer) return;
+    const currentRec = store.getActiveRecipient();
+
+    this.recipientDropdownItemsContainer.innerHTML = store.state.recipients.map(r => {
+      const isSelected = r.id === currentRec.id;
+      const typeBadge = r.type === 'CHILD'
+        ? '<span class="text-[9px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.2 rounded border border-blue-200">幼兒</span>'
+        : '<span class="text-[9px] bg-amber-50 text-amber-800 font-bold px-1.5 py-0.2 rounded border border-amber-200">長輩</span>';
+
+      const actCount = store.state.activities.filter(a => a.recipientId === r.id).length;
+      const cardCount = store.state.activityCards.filter(c => c.recipientId === r.id).length;
+
+      return `
+        <div class="flex items-center justify-between p-2 rounded-xl cursor-pointer transition ${isSelected ? 'bg-[#FAF0E1] border border-[#E5D2BA]' : 'hover:bg-[#FAF6ED] border border-transparent'} btn-dropdown-rec-item" data-rec-id="${r.id}">
+          <div class="flex items-center space-x-2.5 truncate">
+            <span class="text-xl shrink-0 p-1 bg-white rounded-lg shadow-2xs">${r.avatar}</span>
+            <div class="truncate">
+              <div class="flex items-center space-x-1.5">
+                <span class="font-bold text-xs text-[#2C241E]">${r.name}</span>
+                <span class="text-[10px] text-gray-400">(${r.relationship})</span>
+                ${typeBadge}
+              </div>
+              <p class="text-[10px] text-gray-500 truncate mt-0.5">累積 ${cardCount} 張卡片 · ${actCount} 項活動</p>
+            </div>
+          </div>
+          <div class="shrink-0 ml-2">
+            ${isSelected ? '<span class="text-xs text-brand-terracotta font-bold">✓</span>' : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    this.recipientDropdownItemsContainer.querySelectorAll('.btn-dropdown-rec-item').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const recId = el.dataset.recId;
+        store.state.activeRecipientId = recId;
+        store.save();
+        this.menuRecipientDropdown?.classList.add('hidden');
+        this.recipientDropdownArrow?.classList.remove('rotate-180');
+        const updatedRec = store.getActiveRecipient();
+        this.soundFX.playCardShuffle();
+        this.showToast(`已切換為：${updatedRec.avatar} ${updatedRec.name}，全站紀錄已即時連動聚焦！`);
+      });
+    });
+  }
+
   openRecipientModal() {
     const currentId = store.getActiveRecipient().id;
     this.recipientsSelectionList.innerHTML = store.state.recipients.map(r => {
