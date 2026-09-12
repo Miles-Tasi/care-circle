@@ -1883,8 +1883,8 @@ class CareCircleApp {
       const matched = store.state.inspirationPool.find(p => p.targetType === rec.type) || store.state.inspirationPool[0];
       this.openWhoAccompanyModal(matched);
     });
-    this.btnGoToActivities.addEventListener('click', () => this.switchTab('tab-activity'));
-    this.btnGoToCollection.addEventListener('click', () => this.switchTab('tab-collection'));
+    this.btnGoToActivities?.addEventListener('click', () => this.switchTab('tab-activity'));
+    this.btnGoToCollection?.addEventListener('click', () => this.switchTab('tab-collection'));
 
     // 活動 Tab 篩選
     this.activityFilterBtns.forEach(btn => {
@@ -2643,40 +2643,42 @@ class CareCircleApp {
       });
     }
 
-    // 最近完成的活動卡輪播
-    const cards = store.state.activityCards;
-    if (cards.length === 0) {
-      this.homeRecentCardsCarousel.innerHTML = `
-        <div class="w-full text-center py-6 text-gray-400 text-xs">
-          完成第一次陪伴活動，即可生成專屬生活圖鑑卡！
-        </div>
-      `;
-    } else {
-      this.homeRecentCardsCarousel.innerHTML = cards.map(c => {
-        const flower = FLOWER_THEMES[c.flowerKey] || FLOWER_THEMES.DAISY;
-        return `
-          <div class="min-w-[160px] max-w-[160px] bg-[#FAF6ED] rounded-xl p-2.5 border border-[#EADFCF] cursor-pointer hover:border-brand-terracotta transition shadow-2xs flex flex-col justify-between btn-carousel-card" data-card-id="${c.id}">
-            <div>
-              <div class="w-full h-24 rounded-lg overflow-hidden relative mb-1.5 bg-gray-200">
-                <img src="${c.coverPhoto}" alt="${c.title}" class="w-full h-full object-cover">
-                <span class="absolute top-1 right-1 bg-white/80 backdrop-blur-xs text-[9px] px-1.5 py-0.5 rounded font-bold text-[#2C241E]">
-                  ${flower.name}
-                </span>
-              </div>
-              <h4 class="font-bold text-xs text-[#2C241E] line-clamp-1">${c.title}</h4>
-              <p class="text-[10px] text-brand-terracotta line-clamp-1 mt-0.5 font-medium">${flower.language}</p>
-            </div>
-            <div class="mt-2 pt-1 border-t border-[#E8DFD3] flex items-center justify-between text-[9px] text-gray-400">
-              <span>${c.dateStr}</span>
-              <span class="text-brand-terracotta font-semibold">翻面 ↻</span>
-            </div>
+    // 最近完成的活動卡輪播 (若頁面存在該容器時才渲染)
+    if (this.homeRecentCardsCarousel) {
+      const cards = store.state.activityCards;
+      if (cards.length === 0) {
+        this.homeRecentCardsCarousel.innerHTML = `
+          <div class="w-full text-center py-6 text-gray-400 text-xs">
+            完成第一次陪伴活動，即可生成專屬生活圖鑑卡！
           </div>
         `;
-      }).join('');
+      } else {
+        this.homeRecentCardsCarousel.innerHTML = cards.map(c => {
+          const flower = FLOWER_THEMES[c.flowerKey] || FLOWER_THEMES.DAISY;
+          return `
+            <div class="min-w-[160px] max-w-[160px] bg-[#FAF6ED] rounded-xl p-2.5 border border-[#EADFCF] cursor-pointer hover:border-brand-terracotta transition shadow-2xs flex flex-col justify-between btn-carousel-card" data-card-id="${c.id}">
+              <div>
+                <div class="w-full h-24 rounded-lg overflow-hidden relative mb-1.5 bg-gray-200">
+                  <img src="${c.coverPhoto}" alt="${c.title}" class="w-full h-full object-cover">
+                  <span class="absolute top-1 right-1 bg-white/80 backdrop-blur-xs text-[9px] px-1.5 py-0.5 rounded font-bold text-[#2C241E]">
+                    ${flower.name}
+                  </span>
+                </div>
+                <h4 class="font-bold text-xs text-[#2C241E] line-clamp-1">${c.title}</h4>
+                <p class="text-[10px] text-brand-terracotta line-clamp-1 mt-0.5 font-medium">${flower.language}</p>
+              </div>
+              <div class="mt-2 pt-1 border-t border-[#E8DFD3] flex items-center justify-between text-[9px] text-gray-400">
+                <span>${c.dateStr}</span>
+                <span class="text-brand-terracotta font-semibold">翻面 ↻</span>
+              </div>
+            </div>
+          `;
+        }).join('');
 
-      this.homeRecentCardsCarousel.querySelectorAll('.btn-carousel-card').forEach(cardEl => {
-        cardEl.addEventListener('click', () => this.openCardModal(cardEl.dataset.cardId));
-      });
+        this.homeRecentCardsCarousel.querySelectorAll('.btn-carousel-card').forEach(cardEl => {
+          cardEl.addEventListener('click', () => this.openCardModal(cardEl.dataset.cardId));
+        });
+      }
     }
   }
 
