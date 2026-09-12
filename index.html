@@ -293,8 +293,14 @@
     <section id="tab-activity" class="space-y-4 hidden">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-xl font-bold text-[#2C241E]">活動與陪伴安排</h2>
-          <p class="text-xs text-gray-500">管理長輩日常活動與照護夥伴委託</p>
+          <div class="flex items-center space-x-2">
+            <h2 class="text-xl font-bold text-[#2C241E]">活動與陪伴安排</h2>
+            <span id="activity-tab-recipient-badge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-brand-terracotta/10 text-brand-terracotta border border-brand-terracotta/20 flex items-center space-x-1">
+              <span id="activity-badge-avatar">👵</span>
+              <span id="activity-badge-name">王奶奶</span>
+            </span>
+          </div>
+          <p id="activity-tab-subtitle" class="text-xs text-gray-500 mt-0.5">管理長輩日常活動與照護夥伴委託</p>
         </div>
         <button id="btn-create-activity-open" class="flex items-center space-x-1.5 bg-brand-terracotta hover:bg-brand-terracotta-dark text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition">
           <i data-lucide="plus" class="w-4 h-4"></i>
@@ -1200,6 +1206,6 @@
   <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none space-y-2"></div>
 
   <!-- 引入主模組與核心邏輯 (app.bundle.js 支援 file:// 與 http:// 零跨域限制) -->
-  <script src="app.bundle.js?v=3"></script>
+  <script src="app.bundle.js?v=4"></script>
 </body>
 </html>

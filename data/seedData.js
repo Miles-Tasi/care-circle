@@ -339,6 +339,40 @@ export const INITIAL_DATA = {
       mode: 'CAREGIVER',
       careRequestId: 'req-001',
       photos: []
+    },
+    {
+      id: 'act-006',
+      recipientId: 'rec-005',
+      title: '糖糖水彩向日葵自然寫生',
+      category: '幼兒・藝術創作',
+      scheduledDate: '2026-09-11',
+      scheduledTime: '15:00–16:00',
+      location: '客廳遊戲陽台',
+      leadCompanion: '爸爸 王大偉',
+      coParticipants: ['小敏'],
+      notes: '手持畫筆專注描繪向日葵花瓣，色彩明亮生動！',
+      status: 'COMPLETED',
+      mode: 'FAMILY',
+      careRequestId: null,
+      photos: ['https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=600&auto=format&fit=crop&q=80'],
+      completedAt: '2026-09-11 16:15',
+      cardId: 'card-007'
+    },
+    {
+      id: 'act-007',
+      recipientId: 'rec-003',
+      title: '中庭花園水生植物生態巡禮',
+      category: '園藝・感官舒緩',
+      scheduledDate: '2026-09-12',
+      scheduledTime: '16:30–17:30',
+      location: '社區生態花園池畔',
+      leadCompanion: '女兒 王小敏',
+      coParticipants: [],
+      notes: '散步觀察睡蓮與薄荷，感受微風與自然花草香氣。',
+      status: 'SCHEDULED',
+      mode: 'FAMILY',
+      careRequestId: null,
+      photos: []
     }
   ],
 

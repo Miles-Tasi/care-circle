@@ -1044,6 +1044,40 @@ const INITIAL_DATA = {
       mode: 'CAREGIVER',
       careRequestId: 'req-001',
       photos: []
+    },
+    {
+      id: 'act-006',
+      recipientId: 'rec-005',
+      title: '糖糖水彩向日葵自然寫生',
+      category: '幼兒・藝術創作',
+      scheduledDate: '2026-09-11',
+      scheduledTime: '15:00–16:00',
+      location: '客廳遊戲陽台',
+      leadCompanion: '爸爸 王大偉',
+      coParticipants: ['小敏'],
+      notes: '手持畫筆專注描繪向日葵花瓣，色彩明亮生動！',
+      status: 'COMPLETED',
+      mode: 'FAMILY',
+      careRequestId: null,
+      photos: ['https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=600&auto=format&fit=crop&q=80'],
+      completedAt: '2026-09-11 16:15',
+      cardId: 'card-007'
+    },
+    {
+      id: 'act-007',
+      recipientId: 'rec-003',
+      title: '中庭花園水生植物生態巡禮',
+      category: '園藝・感官舒緩',
+      scheduledDate: '2026-09-12',
+      scheduledTime: '16:30–17:30',
+      location: '社區生態花園池畔',
+      leadCompanion: '女兒 王小敏',
+      coParticipants: [],
+      notes: '散步觀察睡蓮與薄荷，感受微風與自然花草香氣。',
+      status: 'SCHEDULED',
+      mode: 'FAMILY',
+      careRequestId: null,
+      photos: []
     }
   ],
 
@@ -1512,7 +1546,7 @@ class ConfettiParticleSystem {
 // ============================================================================
 // 1. 狀態管理 (State Management with LocalStorage)
 // ============================================================================
-const STORAGE_KEY = 'CARE_CIRCLE_STATE_V3';
+const STORAGE_KEY = 'CARE_CIRCLE_STATE_V4';
 
 class Store {
   constructor() {
@@ -1525,6 +1559,15 @@ class Store {
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
         return JSON.parse(cached);
+      }
+      // 平滑升級：若有 V3 舊快取，繼承其申請狀態與選定成員
+      const v3Cached = localStorage.getItem('CARE_CIRCLE_STATE_V3');
+      if (v3Cached) {
+        const parsed = JSON.parse(v3Cached);
+        const initial = JSON.parse(JSON.stringify(INITIAL_DATA));
+        if (parsed.caregiverApplication) initial.caregiverApplication = parsed.caregiverApplication;
+        if (parsed.activeRecipientId) initial.activeRecipientId = parsed.activeRecipientId;
+        return initial;
       }
     } catch (e) {
       console.warn('載入快取失敗，重設為預設種子資料', e);
@@ -1595,6 +1638,7 @@ class CareCircleApp {
     this.caregiverUploadedFiles = [];
     this.caregiverApplication = this.loadCaregiverApplication();
     this.currentKanbanFilter = 'ALL'; // 'ALL' | 'FAMILY' | 'CAREGIVER'
+    this.currentActivityFilter = 'ALL'; // 'ALL' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'
 
     this.initElements();
     this.bindEvents();
@@ -1658,6 +1702,9 @@ class CareCircleApp {
     this.activityFilterBtns = document.querySelectorAll('.activity-filter-btn');
     this.activityFullList = document.getElementById('activity-full-list');
     this.btnCreateActivityOpen = document.getElementById('btn-create-activity-open');
+    this.activityTabSubtitle = document.getElementById('activity-tab-subtitle');
+    this.activityBadgeAvatar = document.getElementById('activity-badge-avatar');
+    this.activityBadgeName = document.getElementById('activity-badge-name');
 
     // 圖鑑 Tab Elements
     this.btnSubtabCards = document.getElementById('btn-subtab-cards');
@@ -1889,13 +1936,8 @@ class CareCircleApp {
     // 活動 Tab 篩選
     this.activityFilterBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        this.activityFilterBtns.forEach(b => {
-          b.classList.remove('active', 'bg-brand-terracotta', 'text-white');
-          b.classList.add('bg-white', 'text-gray-600');
-        });
-        btn.classList.add('active', 'bg-brand-terracotta', 'text-white');
-        btn.classList.remove('bg-white', 'text-gray-600');
-        this.renderActivities(btn.dataset.filter);
+        this.currentActivityFilter = btn.dataset.filter;
+        this.renderActivities(this.currentActivityFilter);
       });
     });
 
@@ -2555,7 +2597,7 @@ class CareCircleApp {
     // 渲染各模組
     this.renderMasterKanban();
     this.renderHome();
-    this.renderActivities('ALL');
+    this.renderActivities(this.currentActivityFilter || 'ALL');
     this.renderCollectionCards();
     this.renderMyWorkspace();
     this.updateCaregiverBannerState();
@@ -2685,20 +2727,56 @@ class CareCircleApp {
   }
 
   // ==========================================================================
-  // 6. 活動模組渲染 (Activity Tab)
+  // 6. 活動模組渲染 (Activity Tab - 依當前選定照護對象過濾)
   // ==========================================================================
   renderActivities(filter = 'ALL') {
-    let acts = [...store.state.activities];
+    this.currentActivityFilter = filter;
+    const activeRec = store.getActiveRecipient();
+
+    // 更新活動頁頂部標籤與聚焦徽章
+    if (this.activityBadgeAvatar) this.activityBadgeAvatar.textContent = activeRec.avatar;
+    if (this.activityBadgeName) this.activityBadgeName.textContent = activeRec.name;
+
+    if (this.activityTabSubtitle) {
+      const typeLabel = activeRec.type === 'CHILD' ? '幼兒' : '長輩';
+      this.activityTabSubtitle.innerHTML = `管理 <strong class="text-brand-terracotta">${activeRec.avatar} ${activeRec.name}</strong> (${typeLabel} · ${activeRec.relationship}) 的專屬活動安排 <span class="ml-1 text-[10px] bg-brand-terracotta/10 text-brand-terracotta px-1.5 py-0.5 rounded font-medium">🎯 已聚焦個人活動</span>`;
+    }
+
+    // 同步篩選按鈕高亮樣式
+    if (this.activityFilterBtns) {
+      this.activityFilterBtns.forEach(btn => {
+        if (btn.dataset.filter === filter) {
+          btn.className = 'activity-filter-btn active px-3 py-1.5 rounded-lg bg-brand-terracotta text-white shadow-xs font-semibold';
+        } else {
+          btn.className = 'activity-filter-btn px-3 py-1.5 rounded-lg bg-white border border-[#E8DFD3] text-gray-600 hover:bg-gray-50';
+        }
+      });
+    }
+
+    // 核心過濾：僅呈現目前選定照護對象 (activeRec) 的個人活動，其他對象不顯示
+    let acts = store.state.activities.filter(a => a.recipientId === activeRec.id);
     if (filter !== 'ALL') {
       acts = acts.filter(a => a.status === filter);
     }
 
     if (acts.length === 0) {
+      const statusNames = {
+        'SCHEDULED': '待開始',
+        'IN_PROGRESS': '進行中',
+        'COMPLETED': '已完成'
+      };
+      const filterNotice = filter !== 'ALL' ? `在「${statusNames[filter] || filter}」狀態下` : '';
       this.activityFullList.innerHTML = `
-        <div class="text-center py-12 bg-white rounded-2xl border border-dashed border-[#E8DFD3] text-gray-400 text-xs space-y-2">
-          <p>暫無符合該狀態的活動</p>
-          <button id="btn-empty-add-act" class="px-4 py-2 bg-brand-terracotta text-white font-bold rounded-xl text-xs">
-            + 建立新活動
+        <div class="text-center py-12 bg-white rounded-2xl border border-dashed border-[#E8DFD3] text-gray-400 text-xs space-y-3">
+          <div class="w-12 h-12 mx-auto bg-[#FAF6ED] rounded-full flex items-center justify-center text-2xl border border-[#E8DFD3]">
+            ${activeRec.avatar}
+          </div>
+          <div>
+            <p class="font-bold text-sm text-[#2C241E]">目前「${activeRec.name}」${filterNotice}暫無活動安排</p>
+            <p class="text-[11px] text-gray-400 mt-1">系統已自動過濾其他照護對象，僅專注呈現 ${activeRec.name} 的個人活動行程</p>
+          </div>
+          <button id="btn-empty-add-act" class="px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta-dark text-white font-bold rounded-xl text-xs transition shadow-xs">
+            + 為 ${activeRec.name} 建立新活動
           </button>
         </div>
       `;
@@ -2707,7 +2785,7 @@ class CareCircleApp {
     }
 
     this.activityFullList.innerHTML = acts.map(act => {
-      const rec = store.state.recipients.find(r => r.id === act.recipientId) || store.getActiveRecipient();
+      const rec = store.state.recipients.find(r => r.id === act.recipientId) || activeRec;
       let statusBadge = '<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">待開始</span>';
       if (act.status === 'IN_PROGRESS') statusBadge = '<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">進行中</span>';
       if (act.status === 'COMPLETED') statusBadge = '<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">已完成</span>';
@@ -2718,7 +2796,7 @@ class CareCircleApp {
         : '<span class="text-[10px] bg-[#FBEFE6] text-brand-terracotta px-1.5 py-0.5 rounded font-semibold">家庭自陪</span>';
 
       return `
-        <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs space-y-2.5">
+        <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs space-y-2.5 hover:border-brand-terracotta/40 transition">
           <div class="flex items-start justify-between">
             <div class="flex items-center space-x-2">
               <span class="text-xl p-1.5 bg-[#FAF6ED] rounded-lg">${rec.avatar}</span>
@@ -2728,7 +2806,7 @@ class CareCircleApp {
                   ${statusBadge}
                 </div>
                 <div class="flex items-center space-x-2 text-[11px] text-gray-400 mt-0.5">
-                  <span>${rec.name} (${rec.relationship})</span>
+                  <span class="font-medium text-[#2C241E]">${rec.name} (${rec.relationship})</span>
                   <span>·</span>
                   ${modeBadge}
                 </div>
@@ -2749,7 +2827,7 @@ class CareCircleApp {
           <!-- 動作按鈕區 -->
           <div class="flex items-center justify-end space-x-2 pt-1 border-t border-[#F2EBE1]">
             ${act.status === 'SCHEDULED' ? `
-              <button class="btn-start-act text-xs bg-brand-sage text-white font-bold px-3 py-1.5 rounded-lg hover:bg-brand-sage-dark shadow-2xs" data-act-id="${act.id}">
+              <button class="btn-start-act text-xs bg-brand-sage text-white font-bold px-3 py-1.5 rounded-lg hover:bg-brand-sage-dark shadow-2xs transition" data-act-id="${act.id}">
                 開始陪伴打卡
               </button>
               ${act.careRequestId ? `
@@ -2760,13 +2838,13 @@ class CareCircleApp {
             ` : ''}
 
             ${act.status === 'IN_PROGRESS' ? `
-              <button class="btn-finish-act text-xs bg-brand-terracotta text-white font-bold px-3 py-1.5 rounded-lg hover:bg-brand-terracotta-dark shadow-2xs" data-act-id="${act.id}">
+              <button class="btn-finish-act text-xs bg-brand-terracotta text-white font-bold px-3 py-1.5 rounded-lg hover:bg-brand-terracotta-dark shadow-2xs transition" data-act-id="${act.id}">
                 完成活動並生成卡片
               </button>
             ` : ''}
 
             ${act.status === 'COMPLETED' ? `
-              <button class="btn-view-card text-xs bg-white text-brand-terracotta border border-brand-terracotta font-bold px-3 py-1.5 rounded-lg hover:bg-[#FAF6ED]" data-card-id="${act.cardId}">
+              <button class="btn-view-card text-xs bg-white text-brand-terracotta border border-brand-terracotta font-bold px-3 py-1.5 rounded-lg hover:bg-[#FAF6ED] transition" data-card-id="${act.cardId}">
                 🎴 翻看生活活動卡
               </button>
             ` : ''}
@@ -2783,6 +2861,7 @@ class CareCircleApp {
           act.status = 'IN_PROGRESS';
           store.logAudit('開始陪伴活動', act.title);
           store.save();
+          this.soundFX.playDraw();
           this.showToast(`已開始「${act.title}」！陪伴結束記得拍照生成紀念卡。`);
         }
       });
@@ -3589,7 +3668,7 @@ class CareCircleApp {
     store.save();
 
     this.showToast(`已建立活動「${title}」！`);
-    this.renderActivities('ALL');
+    this.renderActivities(this.currentActivityFilter || 'ALL');
   }
 
   promptAddHandoff() {
