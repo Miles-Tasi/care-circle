@@ -406,19 +406,43 @@
           </div>
         </div>
 
-        <!-- 申請成為照護夥伴入口 -->
-        <div class="bg-gradient-to-r from-[#FAF6ED] to-[#F3ECE0] rounded-2xl p-4 border border-[#E8DFD3] flex items-center justify-between">
-          <div class="space-y-0.5">
-            <span class="text-xs font-bold text-brand-sage flex items-center space-x-1">
-              <span>🤝</span>
-              <span>想要利用空閒時間陪伴鄰里長輩？</span>
-            </span>
-            <p class="text-xs text-gray-600">加入社區照護夥伴，彈性陪伴賺取報酬</p>
+        <!-- 申請成為照護夥伴入口與狀態容器 -->
+        <div id="caregiver-banner-container" class="bg-gradient-to-r from-[#FAF6ED] to-[#F3ECE0] rounded-2xl p-4 border border-[#E8DFD3] transition-all duration-300">
+          <!-- 狀態 A：未申請 (預設) -->
+          <div id="caregiver-banner-initial" class="flex items-center justify-between">
+            <div class="space-y-0.5">
+              <span class="text-xs font-bold text-brand-sage flex items-center space-x-1">
+                <span>🤝</span>
+                <span>想要利用空閒時間陪伴鄰里長輩？</span>
+              </span>
+              <p class="text-xs text-gray-600">加入社區照護夥伴，彈性陪伴賺取報酬</p>
+            </div>
+            <button id="btn-apply-caregiver-open" class="text-xs bg-brand-sage text-white font-bold px-3 py-1.5 rounded-xl hover:bg-brand-sage-dark shadow-2xs transition">
+              成為照護夥伴
+            </button>
           </div>
-          <button id="btn-apply-caregiver-open" class="text-xs bg-brand-sage text-white font-bold px-3 py-1.5 rounded-xl hover:bg-brand-sage-dark shadow-2xs transition">
-            成為照護夥伴
-          </button>
+
+          <!-- 狀態 B：已上傳審核中 -->
+          <div id="caregiver-banner-pending" class="hidden space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="text-base animate-pulse">⏳</span>
+                <span class="text-xs font-bold text-[#8A5A2B]">資料上傳中請稍待3~5天工作天</span>
+                <span class="text-[10px] bg-[#FAF0E1] text-[#A26D34] font-semibold px-2 py-0.5 rounded-full border border-[#E8DFD3]">審核進行中</span>
+              </div>
+              <button id="btn-view-caregiver-status" class="text-xs bg-white text-brand-sage border border-brand-sage/40 hover:bg-[#EBF2EE] font-bold px-3 py-1 rounded-xl transition shadow-2xs">
+                查看審核進度
+              </button>
+            </div>
+            <p class="text-[11px] text-gray-600">
+              審核文件已派送至管理者信箱 (<span class="font-mono text-brand-terracotta font-semibold">admin@carecircle.tw</span>)，專員正加速核對良民證與資格中。
+            </p>
+            <div id="caregiver-banner-files-badge" class="flex flex-wrap gap-1.5 pt-0.5 text-[11px]">
+              <!-- 動態顯示已核對檔名標籤 -->
+            </div>
+          </div>
         </div>
+
 
         <!-- 審計日誌與隱私說明 -->
         <div class="bg-white rounded-2xl p-4 border border-[#E8DFD3] shadow-xs space-y-2 text-xs text-gray-500">
@@ -867,6 +891,188 @@
         <i data-lucide="plus" class="w-4 h-4"></i>
         <span>新增照護對象 (長輩或幼兒)</span>
       </button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 5: 🤝 成為照護夥伴 · 資料上傳審核 Modal
+       ======================================================================== -->
+  <div id="modal-caregiver-upload" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-6 border border-[#E8DFD3] shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-[#E8DFD3] pb-3">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-2xl bg-[#EBF2EE] text-brand-sage flex items-center justify-center text-lg shadow-2xs">
+            🤝
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-[#2C241E]">申請成為照護夥伴</h3>
+            <p class="text-xs text-gray-500">上傳資料進行身分與資格查核，加入社區互助圈</p>
+          </div>
+        </div>
+        <button id="btn-close-caregiver-modal" class="p-1 rounded-full text-gray-400 hover:text-gray-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- 視圖 A: 填寫與上傳視圖 -->
+      <div id="caregiver-modal-view-upload" class="space-y-4">
+        <!-- 申請人資訊 -->
+        <div class="bg-[#FAF6ED] rounded-2xl p-3.5 border border-[#E8DFD3] space-y-3">
+          <div class="text-xs font-bold text-[#2C241E] flex items-center justify-between">
+            <span>👤 申請人基本資料</span>
+            <span class="text-[10px] text-gray-400 font-normal">審核通過後將以此資料核發接單資格</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="block text-gray-600 mb-1">真實姓名</label>
+              <input id="caregiver-input-name" type="text" value="陳美玲" class="w-full bg-white border border-[#D6C8B4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-sage">
+            </div>
+            <div>
+              <label class="block text-gray-600 mb-1">聯絡電話</label>
+              <input id="caregiver-input-phone" type="text" value="0912-345-678" class="w-full bg-white border border-[#D6C8B4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-sage">
+            </div>
+          </div>
+          <div class="text-xs">
+            <label class="block text-gray-600 mb-1">通知信箱 (接收審核進度通知)</label>
+            <input id="caregiver-input-email" type="email" value="meiling.chen@example.com" class="w-full bg-white border border-[#D6C8B4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-sage">
+          </div>
+        </div>
+
+        <!-- 檔案上傳區塊 -->
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-[#2C241E]">
+            📁 上傳資格證明文件
+          </label>
+          <input type="file" id="caregiver-file-input" multiple accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" class="hidden">
+          
+          <!-- 上傳按鍵 / 拖曳區 -->
+          <div id="caregiver-dropzone" class="border-2 border-dashed border-[#D6C8B4] hover:border-brand-sage bg-[#FDFCF9] hover:bg-[#F4F7F5] rounded-2xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-2 group">
+            <div class="w-11 h-11 rounded-full bg-[#EBF2EE] text-brand-sage flex items-center justify-center text-xl group-hover:scale-105 transition">
+              📤
+            </div>
+            <div class="space-y-0.5">
+              <p class="text-xs font-bold text-gray-700 group-hover:text-brand-sage">
+                點擊此處選擇檔案，或將檔案拖曳至此
+              </p>
+              <p class="text-[11px] text-gray-400">
+                建議文件：良民證 (刑事紀錄證明)、身分證正反面、照顧服務員結業證書
+              </p>
+            </div>
+            <span class="text-[10px] bg-white border border-[#E8DFD3] text-gray-500 px-2.5 py-0.5 rounded-full">
+              支援 PDF, JPG, PNG, DOCX (可一次選取多個檔案)
+            </span>
+          </div>
+        </div>
+
+        <!-- 檔名核對確認清單 (需求重點) -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-[#2C241E] flex items-center space-x-1">
+              <span>📋</span>
+              <span>已選取檔案列表 (請核對檔名)</span>
+            </span>
+            <span id="caregiver-files-count" class="text-[11px] text-gray-500">尚未選擇檔案</span>
+          </div>
+
+          <div id="caregiver-files-preview-list" class="space-y-1.5 max-h-44 overflow-y-auto bg-[#FAF6ED] p-2.5 rounded-2xl border border-[#E8DFD3] min-h-[60px] flex flex-col justify-center">
+            <!-- 預設尚未選擇檔案 -->
+            <p id="caregiver-files-empty-hint" class="text-[11px] text-gray-400 text-center py-2">
+              尚未選擇檔案，請點擊上方按鈕選取文件
+            </p>
+          </div>
+          
+          <div class="flex items-center space-x-1 text-[11px] text-brand-terracotta bg-[#FFF8EE] px-3 py-1.5 rounded-xl border border-[#F0DFCA]">
+            <i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>
+            <span>請務必確認上方顯示之檔名正確無誤，以利審查專員快速比對。</span>
+          </div>
+        </div>
+
+        <!-- 管理者信箱派發提示 -->
+        <div class="bg-[#F4F7F5] rounded-xl p-3 border border-[#D1E0D7] text-xs text-gray-600 flex items-start space-x-2">
+          <span class="text-base shrink-0">📧</span>
+          <div class="space-y-0.5 text-[11px]">
+            <p class="font-bold text-brand-sage">發送至管理者信箱審核</p>
+            <p class="text-gray-500">
+              確認上傳後，系統將自動將檔案加密遞送至平台管理者信箱 <span class="font-mono text-gray-800 font-semibold">admin@carecircle.tw</span>，審查進度將即時同步於首頁。
+            </p>
+          </div>
+        </div>
+
+        <!-- 按鈕操作區 -->
+        <div class="flex items-center space-x-2 pt-1">
+          <button id="btn-cancel-caregiver-upload" class="w-1/3 py-2.5 bg-white border border-[#D6C8B4] hover:bg-gray-50 text-gray-700 font-bold rounded-xl text-xs transition">
+            取消
+          </button>
+          <button id="btn-submit-caregiver-upload" disabled class="flex-1 py-2.5 bg-gray-200 text-gray-400 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 cursor-not-allowed shadow-xs">
+            <span>確認上傳並送出</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 視圖 B: 審核進度視圖 (已上傳後的狀態) -->
+      <div id="caregiver-modal-view-status" class="hidden space-y-4">
+        <div class="bg-gradient-to-br from-[#FFF9F0] to-[#FBF3E6] rounded-2xl p-4 border border-[#EADAC5] space-y-2.5 text-center">
+          <div class="w-12 h-12 rounded-full bg-[#FAF0E1] text-[#A26D34] flex items-center justify-center text-2xl mx-auto shadow-2xs">
+            ⏳
+          </div>
+          <div class="space-y-1">
+            <h4 class="font-bold text-sm text-[#8A5A2B]">資料上傳中請稍待3~5天工作天</h4>
+            <p class="text-xs text-gray-600 max-w-sm mx-auto">
+              您的申請資料與文件已成功發送至管理者信箱 (<span class="font-mono text-brand-terracotta">admin@carecircle.tw</span>)，審查團隊正依序驗證良民證與相關證照。
+            </p>
+          </div>
+        </div>
+
+        <!-- 審核進度條 -->
+        <div class="bg-[#FAF6ED] rounded-2xl p-4 border border-[#E8DFD3] space-y-3">
+          <h5 class="text-xs font-bold text-gray-700">審查進度追蹤</h5>
+          <div class="space-y-3 text-xs">
+            <div class="flex items-center space-x-3">
+              <div class="w-6 h-6 rounded-full bg-brand-sage text-white flex items-center justify-center text-[11px] font-bold">✓</div>
+              <div class="flex-1">
+                <p class="font-bold text-gray-800">資料已送出並抵達管理者信箱</p>
+                <p id="caregiver-status-submit-time" class="text-[10px] text-gray-400"></p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-3">
+              <div class="w-6 h-6 rounded-full bg-[#E58A42] text-white flex items-center justify-center text-[11px] font-bold animate-pulse">2</div>
+              <div class="flex-1">
+                <p class="font-bold text-[#8A5A2B]">資格查驗審查中 (預計 3~5 個工作天)</p>
+                <p class="text-[10px] text-gray-500">平台審核小組進行良民證與身分真實性比對</p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-3 opacity-50">
+              <div class="w-6 h-6 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-[11px] font-bold">3</div>
+              <div class="flex-1">
+                <p class="font-bold text-gray-500">審查通過，開通接單服務權限</p>
+                <p class="text-[10px] text-gray-400">系統自動發送簡訊與 Email 開通信</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 已上傳的檔案清單 -->
+        <div class="space-y-1.5">
+          <span class="text-xs font-bold text-gray-700">已遞送審查檔案清單：</span>
+          <div id="caregiver-status-files-list" class="space-y-1.5 bg-white p-2.5 rounded-xl border border-[#E8DFD3] max-h-36 overflow-y-auto">
+            <!-- 動態列出 -->
+          </div>
+        </div>
+
+        <!-- 管理操作按鈕 -->
+        <div class="flex items-center space-x-2 pt-2">
+          <button id="btn-caregiver-reupload" class="flex-1 py-2.5 bg-white border border-[#D6C8B4] hover:bg-gray-50 text-brand-terracotta font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>重新補件 / 重新上傳</span>
+          </button>
+          <button id="btn-close-caregiver-status" class="flex-1 py-2.5 bg-brand-sage hover:bg-brand-sage-dark text-white font-bold rounded-xl text-xs transition shadow-xs">
+            關閉視窗
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 

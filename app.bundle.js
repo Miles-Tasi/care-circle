@@ -1536,6 +1536,10 @@ class CareCircleApp {
     this.soundFX = new SoundFX();
     this.confetti = null;
 
+    // 照護夥伴申請狀態與暫存檔案
+    this.caregiverUploadedFiles = [];
+    this.caregiverApplication = this.loadCaregiverApplication();
+
     this.initElements();
     this.bindEvents();
     this.renderAll();
@@ -1610,6 +1614,27 @@ class CareCircleApp {
     this.btnInviteMember = document.getElementById('btn-invite-member');
     this.btnAddHandoffOpen = document.getElementById('btn-add-handoff-open');
     this.btnApplyCaregiverOpen = document.getElementById('btn-apply-caregiver-open');
+
+    // 照護夥伴申請與資料上傳元素
+    this.caregiverBannerContainer = document.getElementById('caregiver-banner-container');
+    this.caregiverBannerInitial = document.getElementById('caregiver-banner-initial');
+    this.caregiverBannerPending = document.getElementById('caregiver-banner-pending');
+    this.caregiverBannerFilesBadge = document.getElementById('caregiver-banner-files-badge');
+    this.btnViewCaregiverStatus = document.getElementById('btn-view-caregiver-status');
+    this.modalCaregiverUpload = document.getElementById('modal-caregiver-upload');
+    this.btnCloseCaregiverModal = document.getElementById('btn-close-caregiver-modal');
+    this.btnCancelCaregiverUpload = document.getElementById('btn-cancel-caregiver-upload');
+    this.btnSubmitCaregiverUpload = document.getElementById('btn-submit-caregiver-upload');
+    this.caregiverFileInput = document.getElementById('caregiver-file-input');
+    this.caregiverDropzone = document.getElementById('caregiver-dropzone');
+    this.caregiverFilesPreviewList = document.getElementById('caregiver-files-preview-list');
+    this.caregiverFilesCount = document.getElementById('caregiver-files-count');
+    this.caregiverModalViewUpload = document.getElementById('caregiver-modal-view-upload');
+    this.caregiverModalViewStatus = document.getElementById('caregiver-modal-view-status');
+    this.caregiverStatusSubmitTime = document.getElementById('caregiver-status-submit-time');
+    this.caregiverStatusFilesList = document.getElementById('caregiver-status-files-list');
+    this.btnCaregiverReupload = document.getElementById('btn-caregiver-reupload');
+    this.btnCloseCaregiverStatus = document.getElementById('btn-close-caregiver-status');
 
     // Modals
     this.modalCardDetail = document.getElementById('modal-card-detail');
@@ -1815,10 +1840,8 @@ class CareCircleApp {
       this.showToast('✅ 卡片已產生專屬分享連結，已複製至剪貼簿！');
     });
 
-    // 照護夥伴入駐引導
-    this.btnApplyCaregiverOpen.addEventListener('click', () => {
-      alert('【成為照護夥伴申請引導】\n您好！本平台歡迎具備熱忱、護理背景或長照照顧服務員證照之夥伴。\n申請流程：\n1. 填寫基本履歷\n2. 上傳三個月內良民證\n3. 平台專人審核\n審核通過即可開通接單權限！');
-    });
+    // 照護夥伴入駐與資料上傳事件綁定
+    this.bindCaregiverApplicationEvents();
 
     // 邀請家庭成員
     this.btnInviteMember.addEventListener('click', () => {
@@ -1890,6 +1913,306 @@ class CareCircleApp {
   }
 
   // ==========================================================================
+  // 3.5 照護夥伴申請與資料上傳審核模組 (Caregiver Application & Upload)
+  // ==========================================================================
+  loadCaregiverApplication() {
+    try {
+      const data = localStorage.getItem('carecircle_caregiver_app');
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.warn('載入照護夥伴申請紀錄失敗:', e);
+      return null;
+    }
+  }
+
+  formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  getFileIcon(filename) {
+    if (!filename) return '📄';
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext)) return '🖼️';
+    if (['pdf'].includes(ext)) return '📕';
+    if (['doc', 'docx'].includes(ext)) return '📘';
+    return '📄';
+  }
+
+  bindCaregiverApplicationEvents() {
+    // 點擊「成為照護夥伴」按鈕
+    this.btnApplyCaregiverOpen?.addEventListener('click', () => {
+      this.openCaregiverModal(this.caregiverApplication ? 'status' : 'upload');
+    });
+
+    // 點擊「查看審核進度」按鈕
+    this.btnViewCaregiverStatus?.addEventListener('click', () => {
+      this.openCaregiverModal('status');
+    });
+
+    // 關閉 Modal
+    this.btnCloseCaregiverModal?.addEventListener('click', () => {
+      this.modalCaregiverUpload?.classList.add('hidden');
+    });
+    this.btnCancelCaregiverUpload?.addEventListener('click', () => {
+      this.modalCaregiverUpload?.classList.add('hidden');
+    });
+    this.btnCloseCaregiverStatus?.addEventListener('click', () => {
+      this.modalCaregiverUpload?.classList.add('hidden');
+    });
+
+    // 點擊 Dropzone 觸發原生 File Input
+    this.caregiverDropzone?.addEventListener('click', () => {
+      this.caregiverFileInput?.click();
+    });
+
+    // 拖曳上傳互動
+    this.caregiverDropzone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      this.caregiverDropzone.classList.add('border-brand-sage', 'bg-[#F4F7F5]');
+    });
+    this.caregiverDropzone?.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      this.caregiverDropzone.classList.remove('border-brand-sage', 'bg-[#F4F7F5]');
+    });
+    this.caregiverDropzone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      this.caregiverDropzone.classList.remove('border-brand-sage', 'bg-[#F4F7F5]');
+      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+        this.handleCaregiverFilesSelected(Array.from(e.dataTransfer.files));
+      }
+    });
+
+    // 檔案選取變更
+    this.caregiverFileInput?.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        this.handleCaregiverFilesSelected(Array.from(e.target.files));
+      }
+      // 重置 input 以便重複選擇同名檔案
+      e.target.value = '';
+    });
+
+    // 確認上傳並送出按鍵
+    this.btnSubmitCaregiverUpload?.addEventListener('click', () => {
+      this.submitCaregiverApplication();
+    });
+
+    // 重新補件/重新上傳按鈕
+    this.btnCaregiverReupload?.addEventListener('click', () => {
+      this.resetCaregiverApplication();
+    });
+  }
+
+  handleCaregiverFilesSelected(files) {
+    if (!files || files.length === 0) return;
+    files.forEach(file => {
+      const exists = this.caregiverUploadedFiles.some(f => f.name === file.name && f.size === file.size);
+      if (!exists) {
+        this.caregiverUploadedFiles.push(file);
+      }
+    });
+    this.renderCaregiverFilesPreview();
+  }
+
+  renderCaregiverFilesPreview() {
+    if (!this.caregiverFilesPreviewList) return;
+    const count = this.caregiverUploadedFiles.length;
+    if (this.caregiverFilesCount) {
+      this.caregiverFilesCount.textContent = count > 0 ? `已選取 ${count} 個檔案` : '尚未選擇檔案';
+    }
+
+    if (count === 0) {
+      this.caregiverFilesPreviewList.innerHTML = `
+        <p id="caregiver-files-empty-hint" class="text-[11px] text-gray-400 text-center py-2">
+          尚未選擇檔案，請點擊上方按鈕選取文件
+        </p>
+      `;
+      if (this.btnSubmitCaregiverUpload) {
+        this.btnSubmitCaregiverUpload.disabled = true;
+        this.btnSubmitCaregiverUpload.className = 'flex-1 py-2.5 bg-gray-200 text-gray-400 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 cursor-not-allowed shadow-xs';
+      }
+      return;
+    }
+
+    this.caregiverFilesPreviewList.innerHTML = this.caregiverUploadedFiles.map((file, idx) => `
+      <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-[#E8DFD3] text-xs shadow-2xs hover:border-brand-sage/50 transition">
+        <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+          <span class="text-base shrink-0">${this.getFileIcon(file.name)}</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-bold text-gray-800 truncate text-xs" title="${file.name}">${file.name}</p>
+            <p class="text-[10px] text-gray-400 font-mono">${this.formatFileSize(file.size)}</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2 shrink-0 ml-2">
+          <span class="text-[10px] bg-[#EBF2EE] text-brand-sage font-bold px-2 py-0.5 rounded-full border border-brand-sage/30 flex items-center space-x-0.5">
+            <span>✓</span>
+            <span>檔名已確認</span>
+          </span>
+          <button type="button" data-remove-file="${idx}" class="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-100 transition" title="移除此檔案">
+            ✕
+          </button>
+        </div>
+      </div>
+    `).join('');
+
+    // 綁定檔案移除按鈕
+    this.caregiverFilesPreviewList.querySelectorAll('[data-remove-file]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.currentTarget.getAttribute('data-remove-file'), 10);
+        this.caregiverUploadedFiles.splice(idx, 1);
+        this.renderCaregiverFilesPreview();
+      });
+    });
+
+    // 啟用確認上傳按鍵
+    if (this.btnSubmitCaregiverUpload) {
+      this.btnSubmitCaregiverUpload.disabled = false;
+      this.btnSubmitCaregiverUpload.className = 'flex-1 py-2.5 bg-brand-sage hover:bg-brand-sage-dark text-white font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-md transform active:scale-95';
+    }
+  }
+
+  submitCaregiverApplication() {
+    if (this.caregiverUploadedFiles.length === 0) {
+      alert('請先選取至少一項審核文件（例如良民證或身分證件）！');
+      return;
+    }
+
+    const name = document.getElementById('caregiver-input-name')?.value.trim() || '陳美玲';
+    const phone = document.getElementById('caregiver-input-phone')?.value.trim() || '0912-345-678';
+    const email = document.getElementById('caregiver-input-email')?.value.trim() || 'meiling.chen@example.com';
+    const fileNames = this.caregiverUploadedFiles.map(f => f.name).join('、');
+
+    // 切換按鈕為傳輸狀態
+    if (this.btnSubmitCaregiverUpload) {
+      this.btnSubmitCaregiverUpload.disabled = true;
+      this.btnSubmitCaregiverUpload.innerHTML = `
+        <span class="animate-spin inline-block mr-1">⏳</span>
+        <span>加密傳輸至管理者信箱中...</span>
+      `;
+    }
+
+    setTimeout(() => {
+      // 建立申請資料紀錄
+      const record = {
+        status: 'pending',
+        name,
+        phone,
+        email,
+        adminEmail: 'admin@carecircle.tw',
+        files: this.caregiverUploadedFiles.map(f => ({ name: f.name, size: f.size })),
+        submittedAt: new Date().toISOString()
+      };
+
+      try {
+        localStorage.setItem('carecircle_caregiver_app', JSON.stringify(record));
+      } catch (e) {
+        console.warn(e);
+      }
+      this.caregiverApplication = record;
+
+      // 寫入審計日誌
+      store.addAuditLog('照護夥伴申請', `申請人 ${name} 已上傳審核文件 [${fileNames}]，系統加密發送至管理者信箱 admin@carecircle.tw 審核`);
+
+      // 更新首頁 Banner 狀態為 "資料上傳中請稍待3~5天工作天"
+      this.updateCaregiverBannerState();
+
+      // 關閉 Modal 並提示
+      this.modalCaregiverUpload?.classList.add('hidden');
+
+      // 重置按鈕狀態
+      if (this.btnSubmitCaregiverUpload) {
+        this.btnSubmitCaregiverUpload.disabled = false;
+        this.btnSubmitCaregiverUpload.innerHTML = `<span>確認上傳並送出</span>`;
+      }
+
+      // 播效音與 Toast 提示
+      this.soundFX.playCardDraw();
+      this.showToast('✅ 申請資料與檔案已送達管理者信箱！目前審核中。');
+    }, 1200);
+  }
+
+  updateCaregiverBannerState() {
+    if (!this.caregiverBannerContainer) return;
+    if (this.caregiverApplication) {
+      this.caregiverBannerInitial?.classList.add('hidden');
+      this.caregiverBannerPending?.classList.remove('hidden');
+      this.caregiverBannerContainer.className = 'bg-gradient-to-r from-[#FFFBF2] to-[#FBF4E8] rounded-2xl p-4 border border-[#E5D2BA] shadow-xs transition-all duration-300';
+
+      // 渲染已確認檔名標籤
+      if (this.caregiverBannerFilesBadge) {
+        const files = this.caregiverApplication.files || [];
+        if (files.length > 0) {
+          this.caregiverBannerFilesBadge.innerHTML = files.map(f => `
+            <span class="inline-flex items-center space-x-1 bg-white/90 border border-[#E5D2BA] text-[#5C452F] px-2 py-0.5 rounded-lg shadow-2xs">
+              <span>${this.getFileIcon(f.name)}</span>
+              <span class="font-medium truncate max-w-[150px]">${f.name}</span>
+            </span>
+          `).join('');
+        } else {
+          this.caregiverBannerFilesBadge.innerHTML = '';
+        }
+      }
+    } else {
+      this.caregiverBannerInitial?.classList.remove('hidden');
+      this.caregiverBannerPending?.classList.add('hidden');
+      this.caregiverBannerContainer.className = 'bg-gradient-to-r from-[#FAF6ED] to-[#F3ECE0] rounded-2xl p-4 border border-[#E8DFD3] transition-all duration-300';
+    }
+  }
+
+  openCaregiverModal(view = 'upload') {
+    if (!this.modalCaregiverUpload) return;
+
+    if (view === 'status' && this.caregiverApplication) {
+      this.caregiverModalViewUpload?.classList.add('hidden');
+      this.caregiverModalViewStatus?.classList.remove('hidden');
+
+      // 填寫審核進度
+      if (this.caregiverStatusSubmitTime && this.caregiverApplication.submittedAt) {
+        const d = new Date(this.caregiverApplication.submittedAt);
+        this.caregiverStatusSubmitTime.textContent = `送達時間：${d.toLocaleDateString('zh-TW')} ${d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })} · 已進入分派序列`;
+      }
+
+      if (this.caregiverStatusFilesList) {
+        const files = this.caregiverApplication.files || [];
+        this.caregiverStatusFilesList.innerHTML = files.map(f => `
+          <div class="flex items-center justify-between text-xs py-1 px-2 bg-[#FAF6ED] rounded-lg">
+            <div class="flex items-center space-x-2 truncate">
+              <span>${this.getFileIcon(f.name)}</span>
+              <span class="font-medium text-gray-800 truncate">${f.name}</span>
+              <span class="text-[10px] text-gray-400 font-mono">(${this.formatFileSize(f.size)})</span>
+            </div>
+            <span class="text-[10px] bg-[#EBF2EE] text-brand-sage font-bold px-2 py-0.5 rounded-full border border-brand-sage/30 shrink-0 ml-2">已接收歸檔</span>
+          </div>
+        `).join('');
+      }
+    } else {
+      this.caregiverModalViewUpload?.classList.remove('hidden');
+      this.caregiverModalViewStatus?.classList.add('hidden');
+      this.renderCaregiverFilesPreview();
+    }
+
+    this.modalCaregiverUpload.classList.remove('hidden');
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  }
+
+  resetCaregiverApplication() {
+    if (confirm('確定要重新上傳審核文件嗎？目前已送出的申請狀態將切換為重新選取檔案模式。')) {
+      try {
+        localStorage.removeItem('carecircle_caregiver_app');
+      } catch (e) {}
+      this.caregiverApplication = null;
+      this.caregiverUploadedFiles = [];
+      this.updateCaregiverBannerState();
+      this.openCaregiverModal('upload');
+      this.showToast('已開啟重新上傳模式，請選取新的證明文件。');
+    }
+  }
+
+  // ==========================================================================
   // 4. 全局渲染 (Render All)
   // ==========================================================================
   renderAll() {
@@ -1931,6 +2254,7 @@ class CareCircleApp {
     this.renderActivities('ALL');
     this.renderCollectionCards();
     this.renderMyWorkspace();
+    this.updateCaregiverBannerState();
 
     // 重新載入 Lucide Icons
     if (window.lucide) {
@@ -2497,6 +2821,9 @@ class CareCircleApp {
           <span>[${l.timestamp.slice(5)}] ${l.operator} (${l.action}): ${l.target}</span>
         </div>
       `).join('');
+
+      // 更新成為照護夥伴橫幅狀態
+      this.updateCaregiverBannerState();
     }
   }
 
