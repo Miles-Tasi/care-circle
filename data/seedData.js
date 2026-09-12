@@ -10,7 +10,7 @@ export const INITIAL_DATA = {
     name: '王小敏',
     email: 'min.wang@carecircle.tw',
     avatar: '👩‍💼',
-    activeRole: 'FAMILY', // 'FAMILY' | 'CAREGIVER'
+    activeRole: 'KANBAN', // 'KANBAN' | 'FAMILY' | 'CAREGIVER'
     phone: '0912-345-678',
     isCaregiverApproved: true
   },
@@ -95,6 +95,22 @@ export const INITIAL_DATA = {
       mobilityScore: 5,
       healthNotes: '傍晚眼睛較易疲倦，繪畫手作時間建議不超過 40 分鐘。',
       location: '台北市大安區新生南路',
+      isDefault: false
+    },
+    {
+      id: 'rec-006',
+      type: 'ELDERLY',
+      name: '林爺爺',
+      relationship: '鄰里長輩 (社區照護圈)',
+      avatar: '👴',
+      age: 78,
+      birthdate: '1948-02-14',
+      careLevel: 'NEED_ASSIST',
+      statusTags: ['社區互助圈', '需要防跌看護', '喜愛公園散步'],
+      interests: ['散步', '聽廣播', '泡茶'],
+      mobilityScore: 3,
+      healthNotes: '行動稍緩，戶外散步需放慢速度並定期提醒補充水分。',
+      location: '台北市大安區建國南路二段',
       isDefault: false
     }
   ],
@@ -199,17 +215,56 @@ export const INITIAL_DATA = {
 
   // 活動清單 (Activities)
   activities: [
+    // 🌅 早上：家庭模式 (帶小孩去幼稚園)
     {
-      id: 'act-001',
-      recipientId: 'rec-001',
-      title: '陪王奶奶去大安森林公園散步',
-      category: '戶外・散步',
+      id: 'act-today-morning',
+      recipientId: 'rec-004',
+      title: '送小宇去向日葵幼兒園 (交接水壺與聯絡簿)',
+      category: '家庭・幼兒送托',
+      timeSlot: 'MORNING',
       scheduledDate: '2026-09-12',
-      scheduledTime: '15:00–16:00',
-      location: '大安森林公園生態池',
-      leadCompanion: '女兒 王小敏',
-      coParticipants: ['孫子 阿宇'],
-      notes: '穿著防滑布鞋，備薄圍巾防風。',
+      scheduledTime: '08:00–09:00',
+      location: '向日葵市立幼兒園 (大安分班)',
+      leadCompanion: '媽媽 王小敏 (家庭模式)',
+      coParticipants: [],
+      notes: '準備水壺與換洗衣物袋，與幼兒園導師交接晨間體溫與今日叮嚀事項。',
+      status: 'COMPLETED',
+      mode: 'FAMILY',
+      careRequestId: null,
+      photos: []
+    },
+    // ☀️ 下午：夥伴模式 (陪伴其他照護圈支持處理)
+    {
+      id: 'act-today-afternoon',
+      recipientId: 'rec-006',
+      title: '陪伴其他照護圈支持處理 (社區照護夥伴散步看護)',
+      category: '社區・夥伴陪伴',
+      timeSlot: 'AFTERNOON',
+      scheduledDate: '2026-09-12',
+      scheduledTime: '14:00–16:00',
+      location: '大安森林公園生態步道 / 鄰里樂齡中心',
+      leadCompanion: '認證照護夥伴 王小敏 (夥伴模式)',
+      coParticipants: ['社區志工隊'],
+      notes: '受委託支援長輩日常陪伴與步行防跌看護，定時補充溫開水。預估獲得報酬 NT$ 750。',
+      status: 'IN_PROGRESS',
+      mode: 'CAREGIVER',
+      reward: 750,
+      careRequestId: 'cr-001',
+      photos: []
+    },
+    // 🌙 晚上：家庭模式 (帶媽媽去醫院看診)
+    {
+      id: 'act-today-evening',
+      recipientId: 'rec-001',
+      title: '帶媽媽去醫院心臟科看診 (慢性病追蹤與慢籤領藥)',
+      category: '醫療・陪同就醫',
+      timeSlot: 'EVENING',
+      scheduledDate: '2026-09-12',
+      scheduledTime: '18:30–20:30',
+      location: '台大醫院西址門診部 心臟內科第 32 診',
+      leadCompanion: '女兒 王小敏 (家庭模式)',
+      coParticipants: [],
+      notes: '攜帶健保卡、近期血壓日誌與連續處方箋，夜間外出請為長輩穿戴薄圍巾保暖。',
       status: 'SCHEDULED',
       mode: 'FAMILY',
       careRequestId: null,

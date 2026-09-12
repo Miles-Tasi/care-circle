@@ -715,7 +715,7 @@ const INITIAL_DATA = {
     name: '王小敏',
     email: 'min.wang@carecircle.tw',
     avatar: '👩‍💼',
-    activeRole: 'FAMILY', // 'FAMILY' | 'CAREGIVER'
+    activeRole: 'KANBAN', // 'KANBAN' | 'FAMILY' | 'CAREGIVER'
     phone: '0912-345-678',
     isCaregiverApproved: true
   },
@@ -800,6 +800,22 @@ const INITIAL_DATA = {
       mobilityScore: 5,
       healthNotes: '傍晚眼睛較易疲倦，繪畫手作時間建議不超過 40 分鐘。',
       location: '台北市大安區新生南路',
+      isDefault: false
+    },
+    {
+      id: 'rec-006',
+      type: 'ELDERLY',
+      name: '林爺爺',
+      relationship: '鄰里長輩 (社區照護圈)',
+      avatar: '👴',
+      age: 78,
+      birthdate: '1948-02-14',
+      careLevel: 'NEED_ASSIST',
+      statusTags: ['社區互助圈', '需要防跌看護', '喜愛公園散步'],
+      interests: ['散步', '聽廣播', '泡茶'],
+      mobilityScore: 3,
+      healthNotes: '行動稍緩，戶外散步需放慢速度並定期提醒補充水分。',
+      location: '台北市大安區建國南路二段',
       isDefault: false
     }
   ],
@@ -904,17 +920,56 @@ const INITIAL_DATA = {
 
   // 活動清單 (Activities)
   activities: [
+    // 🌅 早上：家庭模式 (帶小孩去幼稚園)
     {
-      id: 'act-001',
-      recipientId: 'rec-001',
-      title: '陪王奶奶去大安森林公園散步',
-      category: '戶外・散步',
+      id: 'act-today-morning',
+      recipientId: 'rec-004',
+      title: '送小宇去向日葵幼兒園 (交接水壺與聯絡簿)',
+      category: '家庭・幼兒送托',
+      timeSlot: 'MORNING',
       scheduledDate: '2026-09-12',
-      scheduledTime: '15:00–16:00',
-      location: '大安森林公園生態池',
-      leadCompanion: '女兒 王小敏',
-      coParticipants: ['孫子 阿宇'],
-      notes: '穿著防滑布鞋，備薄圍巾防風。',
+      scheduledTime: '08:00–09:00',
+      location: '向日葵市立幼兒園 (大安分班)',
+      leadCompanion: '媽媽 王小敏 (家庭模式)',
+      coParticipants: [],
+      notes: '準備水壺與換洗衣物袋，與幼兒園導師交接晨間體溫與今日叮嚀事項。',
+      status: 'COMPLETED',
+      mode: 'FAMILY',
+      careRequestId: null,
+      photos: []
+    },
+    // ☀️ 下午：夥伴模式 (陪伴其他照護圈支持處理)
+    {
+      id: 'act-today-afternoon',
+      recipientId: 'rec-006',
+      title: '陪伴其他照護圈支持處理 (社區照護夥伴散步看護)',
+      category: '社區・夥伴陪伴',
+      timeSlot: 'AFTERNOON',
+      scheduledDate: '2026-09-12',
+      scheduledTime: '14:00–16:00',
+      location: '大安森林公園生態步道 / 鄰里樂齡中心',
+      leadCompanion: '認證照護夥伴 王小敏 (夥伴模式)',
+      coParticipants: ['社區志工隊'],
+      notes: '受委託支援長輩日常陪伴與步行防跌看護，定時補充溫開水。預估獲得報酬 NT$ 750。',
+      status: 'IN_PROGRESS',
+      mode: 'CAREGIVER',
+      reward: 750,
+      careRequestId: 'cr-001',
+      photos: []
+    },
+    // 🌙 晚上：家庭模式 (帶媽媽去醫院看診)
+    {
+      id: 'act-today-evening',
+      recipientId: 'rec-001',
+      title: '帶媽媽去醫院心臟科看診 (慢性病追蹤與慢籤領藥)',
+      category: '醫療・陪同就醫',
+      timeSlot: 'EVENING',
+      scheduledDate: '2026-09-12',
+      scheduledTime: '18:30–20:30',
+      location: '台大醫院西址門診部 心臟內科第 32 診',
+      leadCompanion: '女兒 王小敏 (家庭模式)',
+      coParticipants: [],
+      notes: '攜帶健保卡、近期血壓日誌與連續處方箋，夜間外出請為長輩穿戴薄圍巾保暖。',
       status: 'SCHEDULED',
       mode: 'FAMILY',
       careRequestId: null,
@@ -1539,6 +1594,7 @@ class CareCircleApp {
     // 照護夥伴申請狀態與暫存檔案
     this.caregiverUploadedFiles = [];
     this.caregiverApplication = this.loadCaregiverApplication();
+    this.currentKanbanFilter = 'ALL'; // 'ALL' | 'FAMILY' | 'CAREGIVER'
 
     this.initElements();
     this.bindEvents();
@@ -1559,8 +1615,20 @@ class CareCircleApp {
     this.btnToggleRole = document.getElementById('btn-toggle-role');
     this.roleBadgeIcon = document.getElementById('role-badge-icon');
     this.roleBadgeText = document.getElementById('role-badge-text');
+    this.menuRoleDropdown = document.getElementById('menu-role-dropdown');
+    this.roleDropdownArrow = document.getElementById('role-dropdown-arrow');
     this.btnResetDemo = document.getElementById('btn-reset-demo');
     this.btnOpenAi = document.getElementById('btn-open-ai');
+
+    // 總覽看板 Elements
+    this.homeKanbanOverviewSection = document.getElementById('home-kanban-overview-section');
+    this.kanbanTimelineCardsContainer = document.getElementById('kanban-timeline-cards-container');
+    this.filterKanbanAll = document.getElementById('filter-kanban-all');
+    this.filterKanbanFamily = document.getElementById('filter-kanban-family');
+    this.filterKanbanCaregiver = document.getElementById('filter-kanban-caregiver');
+    this.kanbanStatTotal = document.getElementById('kanban-stat-total');
+    this.kanbanStatFamily = document.getElementById('kanban-stat-family');
+    this.kanbanStatCaregiver = document.getElementById('kanban-stat-caregiver');
 
     // 導覽 Tab 按鈕
     this.navBtns = document.querySelectorAll('.nav-tab-btn');
@@ -1694,16 +1762,51 @@ class CareCircleApp {
       });
     });
 
-    // 身分切換 (家庭 / 夥伴)
-    const toggleRole = () => {
-      const newRole = store.state.currentUser.activeRole === 'FAMILY' ? 'CAREGIVER' : 'FAMILY';
-      store.state.currentUser.activeRole = newRole;
-      store.logAudit('切換角色身分', `切換為 ${newRole === 'FAMILY' ? '家庭照護模式' : '照護夥伴模式'}`);
-      store.save();
-      this.showToast(`已切換為「${newRole === 'FAMILY' ? '🏠 家庭照護模式' : '🤝 照護夥伴工作台'}」`);
-    };
-    this.btnToggleRole.addEventListener('click', toggleRole);
-    this.btnSwitchRoleProminent.addEventListener('click', toggleRole);
+    // 角色模式切換開關 (點擊打開/收合下拉選單)
+    this.btnToggleRole?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.menuRoleDropdown?.classList.toggle('hidden');
+      this.roleDropdownArrow?.classList.toggle('rotate-180');
+    });
+
+    // 點選下拉選單選項 (KANBAN / FAMILY / CAREGIVER)
+    this.menuRoleDropdown?.querySelectorAll('[data-role-target]').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        const target = e.currentTarget.getAttribute('data-role-target');
+        this.switchRoleMode(target);
+        this.menuRoleDropdown?.classList.add('hidden');
+        this.roleDropdownArrow?.classList.remove('rotate-180');
+      });
+    });
+
+    // 點選頁面外部關閉下拉選單
+    document.addEventListener('click', (e) => {
+      if (!this.btnToggleRole?.contains(e.target) && !this.menuRoleDropdown?.contains(e.target)) {
+        this.menuRoleDropdown?.classList.add('hidden');
+        this.roleDropdownArrow?.classList.remove('rotate-180');
+      }
+    });
+
+    // 工作台次級切換開關 (我的分頁)
+    this.btnSwitchRoleProminent?.addEventListener('click', () => {
+      const current = store.state.currentUser.activeRole || 'KANBAN';
+      const nextRole = current === 'CAREGIVER' ? 'FAMILY' : 'CAREGIVER';
+      this.switchRoleMode(nextRole);
+    });
+
+    // 總覽看板篩選按鈕
+    this.filterKanbanAll?.addEventListener('click', () => {
+      this.currentKanbanFilter = 'ALL';
+      this.renderMasterKanban();
+    });
+    this.filterKanbanFamily?.addEventListener('click', () => {
+      this.currentKanbanFilter = 'FAMILY';
+      this.renderMasterKanban();
+    });
+    this.filterKanbanCaregiver?.addEventListener('click', () => {
+      this.currentKanbanFilter = 'CAREGIVER';
+      this.renderMasterKanban();
+    });
 
     // 重設示範資料
     this.btnResetDemo.addEventListener('click', () => {
@@ -2213,29 +2316,229 @@ class CareCircleApp {
   }
 
   // ==========================================================================
+  // 3.6 總覽看板與角色模式控制器 (Master Kanban & Role Mode Controller)
+  // ==========================================================================
+  switchRoleMode(newRole) {
+    store.state.currentUser.activeRole = newRole;
+    store.logAudit('切換工作模式', `切換為 ${newRole === 'KANBAN' ? '📊 總覽看板模式' : (newRole === 'FAMILY' ? '🏠 家庭照護模式' : '🤝 照護夥伴工作台')}`);
+    store.save();
+
+    let toastLabel = '📊 總覽看板模式 (全日整合日程)';
+    if (newRole === 'FAMILY') toastLabel = '🏠 家庭照護模式 (家內對象日常)';
+    if (newRole === 'CAREGIVER') toastLabel = '🤝 照護夥伴工作台 (社區接單與履約)';
+
+    this.soundFX.playCardShuffle();
+    this.showToast(`已切換為「${toastLabel}」`);
+    this.renderAll();
+  }
+
+  renderMasterKanban() {
+    if (!this.kanbanTimelineCardsContainer) return;
+
+    // 今日 2026-09-12 活動
+    const todayStr = '2026-09-12';
+    const allTodayActs = store.state.activities.filter(a => a.scheduledDate === todayStr);
+
+    // 今日跨角色統計
+    const totalCount = allTodayActs.length;
+    const familyCount = allTodayActs.filter(a => a.mode === 'FAMILY').length;
+    const caregiverCount = allTodayActs.filter(a => a.mode === 'CAREGIVER').length;
+    const totalReward = allTodayActs.reduce((sum, a) => sum + (a.reward || 0), 0);
+
+    if (this.kanbanStatTotal) this.kanbanStatTotal.textContent = `${totalCount} 項任務`;
+    if (this.kanbanStatFamily) this.kanbanStatFamily.textContent = `${familyCount} 案 (幼兒+長輩)`;
+    if (this.kanbanStatCaregiver) this.kanbanStatCaregiver.textContent = `${caregiverCount} 案 (報酬 NT$ ${totalReward})`;
+
+    // 篩選按鈕樣式更新
+    const filterBtns = [
+      { btn: this.filterKanbanAll, key: 'ALL' },
+      { btn: this.filterKanbanFamily, key: 'FAMILY' },
+      { btn: this.filterKanbanCaregiver, key: 'CAREGIVER' }
+    ];
+    filterBtns.forEach(({ btn, key }) => {
+      if (!btn) return;
+      if (this.currentKanbanFilter === key) {
+        btn.className = 'kanban-filter-btn px-2.5 py-1 rounded-lg font-bold transition text-xs bg-brand-terracotta text-white shadow-xs';
+      } else {
+        btn.className = 'kanban-filter-btn px-2.5 py-1 rounded-lg font-bold transition text-xs text-gray-600 hover:text-brand-terracotta';
+      }
+    });
+
+    // 依篩選條件過濾
+    let displayActs = [...allTodayActs];
+    if (this.currentKanbanFilter === 'FAMILY') {
+      displayActs = displayActs.filter(a => a.mode === 'FAMILY');
+    } else if (this.currentKanbanFilter === 'CAREGIVER') {
+      displayActs = displayActs.filter(a => a.mode === 'CAREGIVER');
+    }
+
+    // 依早中晚時段排序
+    const slotWeight = { 'MORNING': 1, 'AFTERNOON': 2, 'EVENING': 3 };
+    displayActs.sort((a, b) => (slotWeight[a.timeSlot] || 99) - (slotWeight[b.timeSlot] || 99));
+
+    if (displayActs.length === 0) {
+      this.kanbanTimelineCardsContainer.innerHTML = `
+        <div class="text-center py-8 bg-[#FAF6ED] rounded-2xl border border-dashed border-[#E8DFD3] text-gray-400 text-xs">
+          此篩選條件下無符合之今日排程
+        </div>
+      `;
+      return;
+    }
+
+    // 渲染卡片
+    this.kanbanTimelineCardsContainer.innerHTML = displayActs.map(act => {
+      const rec = store.state.recipients.find(r => r.id === act.recipientId) || { name: '照護對象', avatar: '👵', type: 'ELDERLY', age: 80 };
+      const isFamily = act.mode === 'FAMILY';
+
+      // 時段圖示與標籤
+      let timeIcon = '🌅';
+      let timeSlotLabel = '早上 (晨間送托)';
+      if (act.timeSlot === 'AFTERNOON') {
+        timeIcon = '☀️';
+        timeSlotLabel = '下午 (夥伴受託支援)';
+      } else if (act.timeSlot === 'EVENING') {
+        timeIcon = '🌙';
+        timeSlotLabel = '晚上 (長輩就醫陪診)';
+      }
+
+      // 狀態標籤
+      let statusBadge = '<span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">排程中</span>';
+      if (act.status === 'IN_PROGRESS') {
+        statusBadge = '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold animate-pulse">進行中</span>';
+      } else if (act.status === 'COMPLETED') {
+        statusBadge = '<span class="text-[10px] bg-[#EBF2EE] text-brand-sage px-2 py-0.5 rounded-full font-bold flex items-center space-x-0.5"><span>✓</span><span>已完成</span></span>';
+      }
+
+      // 模式標籤與外框
+      const modeBadge = isFamily
+        ? `<span class="text-[10px] bg-[#FAF0E1] text-brand-terracotta border border-[#E8DFD3] px-2 py-0.5 rounded-full font-bold flex items-center space-x-1"><span>🏠</span><span>家庭模式</span></span>`
+        : `<span class="text-[10px] bg-[#EBF2EE] text-brand-sage border border-[#CFDFD6] px-2 py-0.5 rounded-full font-bold flex items-center space-x-1"><span>🤝</span><span>夥伴模式</span></span>`;
+
+      const borderClass = isFamily ? 'border-[#E8DFD3] hover:border-brand-terracotta/60' : 'border-[#CFDFD6] hover:border-brand-sage/60';
+      const bgCard = isFamily ? 'bg-[#FAF6ED]/80' : 'bg-[#F4F7F5]/90';
+
+      return `
+        <div class="${bgCard} rounded-2xl p-4 border ${borderClass} shadow-2xs space-y-3 transition group hover:shadow-xs">
+          <!-- 頂部時段與身分標籤 -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="text-sm font-bold text-gray-800 flex items-center space-x-1.5">
+                <span class="text-base">${timeIcon}</span>
+                <span>${timeSlotLabel}</span>
+                <span class="font-mono text-xs text-gray-500 font-normal">(${act.scheduledTime})</span>
+              </span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+              ${modeBadge}
+              ${statusBadge}
+            </div>
+          </div>
+
+          <!-- 任務標題與說明 -->
+          <div class="space-y-1.5">
+            <h4 class="font-bold text-sm text-[#2C241E] group-hover:text-brand-terracotta transition leading-snug">
+              ${act.title}
+            </h4>
+            <p class="text-xs text-gray-600 leading-relaxed bg-white/60 p-2.5 rounded-xl border border-gray-100">
+              ${act.notes}
+            </p>
+          </div>
+
+          <!-- 對象、照顧者身分與報酬標記 -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-200/60 text-xs">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600">
+              <span class="flex items-center space-x-1 font-semibold text-gray-800">
+                <span class="text-sm">${rec.avatar}</span>
+                <span>對象：${rec.name}</span>
+                <span class="text-[10px] text-gray-400 font-normal">(${rec.relationship || rec.type})</span>
+              </span>
+              <span class="flex items-center space-x-1">
+                <span>👤</span>
+                <span class="font-medium text-[#2C241E]">${act.leadCompanion}</span>
+              </span>
+              <span class="flex items-center space-x-1 text-gray-500">
+                <span>📍</span>
+                <span>${act.location}</span>
+              </span>
+              ${act.reward ? `
+                <span class="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  💰 預計報酬 NT$ ${act.reward}
+                </span>
+              ` : ''}
+            </div>
+
+            <!-- 操作狀態 -->
+            <div>
+              ${act.status !== 'COMPLETED' ? `
+                <button class="btn-kanban-act-done px-3 py-1 bg-brand-terracotta hover:bg-brand-terracotta-dark text-white font-bold rounded-lg text-xs transition shadow-2xs" data-act-id="${act.id}">
+                  完成此任務
+                </button>
+              ` : `
+                <span class="text-[11px] text-brand-sage font-bold flex items-center space-x-1">
+                  <span>✓</span>
+                  <span>記錄已同步交班</span>
+                </span>
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 綁定卡片完成按鈕
+    this.kanbanTimelineCardsContainer.querySelectorAll('.btn-kanban-act-done').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const actId = e.currentTarget.getAttribute('data-act-id');
+        const act = store.state.activities.find(a => a.id === actId);
+        if (act) {
+          act.status = 'COMPLETED';
+          act.completedAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
+          store.logAudit('完成日程任務', `${act.title} (${act.leadCompanion})`);
+          store.save();
+          this.soundFX.playSuccessChime();
+          this.showToast(`🎉 已完成「${act.title}」！`);
+          this.renderAll();
+        }
+      });
+    });
+  }
+
+  // ==========================================================================
   // 4. 全局渲染 (Render All)
   // ==========================================================================
   renderAll() {
-    const isCaregiver = store.state.currentUser.activeRole === 'CAREGIVER';
+    const role = store.state.currentUser.activeRole || 'KANBAN';
     const activeRec = store.getActiveRecipient();
 
-    // 更新 Body 樣式 (照護夥伴工作台色系)
-    if (isCaregiver) {
+    // 更新 Header 按鈕與工作台樣式
+    if (role === 'KANBAN') {
+      document.body.classList.remove('caregiver-mode');
+      this.roleBadgeIcon.textContent = '📊';
+      this.roleBadgeText.textContent = '總覽看板';
+      this.btnToggleRole.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all shadow-xs bg-[#FAF2E6] text-[#8A5A2B] border-[#E8D2B5] hover:border-brand-terracotta';
+      if (this.roleSwitchLabel) this.roleSwitchLabel.textContent = '切換至夥伴模式';
+      this.caregiverWorkspace?.classList.add('hidden');
+      this.familyWorkspace?.classList.remove('hidden');
+      this.homeKanbanOverviewSection?.classList.remove('hidden');
+    } else if (role === 'CAREGIVER') {
       document.body.classList.add('caregiver-mode');
       this.roleBadgeIcon.textContent = '🤝';
       this.roleBadgeText.textContent = '夥伴工作台';
-      this.btnToggleRole.className = 'flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition shadow-xs bg-[#D8E5DC] text-[#1C2E24] border-[#B2CBBF]';
-      this.roleSwitchLabel.textContent = '切換回家庭模式';
-      this.caregiverWorkspace.classList.remove('hidden');
-      this.familyWorkspace.classList.add('hidden');
+      this.btnToggleRole.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all shadow-xs bg-[#D8E5DC] text-[#1C2E24] border-[#B2CBBF] hover:bg-[#C8DDD0]';
+      if (this.roleSwitchLabel) this.roleSwitchLabel.textContent = '切換回家庭模式';
+      this.caregiverWorkspace?.classList.remove('hidden');
+      this.familyWorkspace?.classList.add('hidden');
+      this.homeKanbanOverviewSection?.classList.add('hidden');
     } else {
+      // FAMILY 模式
       document.body.classList.remove('caregiver-mode');
       this.roleBadgeIcon.textContent = '🏠';
       this.roleBadgeText.textContent = '家庭模式';
-      this.btnToggleRole.className = 'flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition shadow-xs bg-[#EFE9DE] text-[#2C241E] border-[#D6C8B4]';
-      this.roleSwitchLabel.textContent = '切換至夥伴模式';
-      this.caregiverWorkspace.classList.add('hidden');
-      this.familyWorkspace.classList.remove('hidden');
+      this.btnToggleRole.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all shadow-xs bg-[#EFE9DE] text-[#2C241E] border-[#D6C8B4] hover:bg-[#E2D9CB]';
+      if (this.roleSwitchLabel) this.roleSwitchLabel.textContent = '切換至夥伴模式';
+      this.caregiverWorkspace?.classList.add('hidden');
+      this.familyWorkspace?.classList.remove('hidden');
+      this.homeKanbanOverviewSection?.classList.add('hidden');
     }
 
     // 頂部長輩/幼兒 Header
@@ -2250,6 +2553,7 @@ class CareCircleApp {
     }
 
     // 渲染各模組
+    this.renderMasterKanban();
     this.renderHome();
     this.renderActivities('ALL');
     this.renderCollectionCards();
