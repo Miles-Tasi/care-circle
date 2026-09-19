@@ -722,10 +722,11 @@ const INITIAL_DATA = {
     isCaregiverApproved: true
   },
 
-  // 照護對象：長輩 (ELDERLY) 與 幼兒 (CHILD)
+  // 照護對象：分為「我自己家庭」(FAMILY) 與「其他照護夥伴」(PARTNER)
   recipients: [
     {
       id: 'rec-001',
+      category: 'FAMILY',
       type: 'ELDERLY',
       name: '王奶奶',
       relationship: '母親',
@@ -742,6 +743,7 @@ const INITIAL_DATA = {
     },
     {
       id: 'rec-002',
+      category: 'FAMILY',
       type: 'ELDERLY',
       name: '王爺爺',
       relationship: '父親',
@@ -758,6 +760,7 @@ const INITIAL_DATA = {
     },
     {
       id: 'rec-003',
+      category: 'FAMILY',
       type: 'ELDERLY',
       name: '林阿姨',
       relationship: '姑姑',
@@ -774,6 +777,7 @@ const INITIAL_DATA = {
     },
     {
       id: 'rec-004',
+      category: 'FAMILY',
       type: 'CHILD',
       name: '小宇',
       relationship: '兒子 (幼兒照護圈)',
@@ -790,6 +794,7 @@ const INITIAL_DATA = {
     },
     {
       id: 'rec-005',
+      category: 'FAMILY',
       type: 'CHILD',
       name: '糖糖',
       relationship: '女兒 (幼兒照護圈)',
@@ -806,6 +811,7 @@ const INITIAL_DATA = {
     },
     {
       id: 'rec-006',
+      category: 'PARTNER',
       type: 'ELDERLY',
       name: '林爺爺',
       relationship: '鄰里長輩 (社區照護圈)',
@@ -818,6 +824,23 @@ const INITIAL_DATA = {
       mobilityScore: 3,
       healthNotes: '行動稍緩，戶外散步需放慢速度並定期提醒補充水分。',
       location: '台北市大安區建國南路二段',
+      isDefault: false
+    },
+    {
+      id: 'rec-007',
+      category: 'PARTNER',
+      type: 'ELDERLY',
+      name: '陳奶奶',
+      relationship: '獨居關懷長輩 (社區照護圈)',
+      avatar: '👵',
+      age: 80,
+      birthdate: '1946-07-09',
+      careLevel: 'NEED_ASSIST',
+      statusTags: ['社區獨居關懷', '溫和健談', '定期收音機陪伴'],
+      interests: ['聊天', '散步', '手工藝', '收音機廣播'],
+      mobilityScore: 3,
+      healthNotes: '獨居長輩，需定期陪伴關心用藥安全與水分補充。',
+      location: '台北市中正區羅斯福路二段',
       isDefault: false
     }
   ],
@@ -1750,6 +1773,16 @@ class Store {
     return rec || defaultRec;
   }
 
+  // 取得我自己家庭照護對象清單
+  getFamilyRecipients() {
+    return this.state.recipients.filter(r => r.category === 'FAMILY' || (!r.category && !r.relationship.includes('社區') && !r.relationship.includes('夥伴')));
+  }
+
+  // 取得其他照護夥伴對象清單
+  getPartnerRecipients() {
+    return this.state.recipients.filter(r => r.category === 'PARTNER' || r.relationship.includes('社區') || r.relationship.includes('夥伴'));
+  }
+
   // 寫入審計日誌
   logAudit(action, target) {
     const newLog = {
@@ -1941,8 +1974,13 @@ class CareCircleApp {
     this.caregiverWorkspace = document.getElementById('caregiver-workspace-container');
     this.familyWorkspace = document.getElementById('family-workspace-container');
     this.caregiverRequestsPool = document.getElementById('caregiver-requests-pool');
-    this.caregiverActiveServiceBox = document.getElementById('caregiver-active-service-box');
     this.myRecipientsList = document.getElementById('my-recipients-list');
+    this.myFamilyRecipientsList = document.getElementById('my-family-recipients-list');
+    this.myPartnerRecipientsList = document.getElementById('my-partner-recipients-list');
+    this.familyRecipientsCountBadge = document.getElementById('family-recipients-count-badge');
+    this.partnerRecipientsCountBadge = document.getElementById('partner-recipients-count-badge');
+    this.btnAddFamilyRecipient = document.getElementById('btn-add-family-recipient');
+    this.btnAddPartnerRecipient = document.getElementById('btn-add-partner-recipient');
     this.myCircleMembersList = document.getElementById('my-circle-members-list');
     this.myHandoffRecent = document.getElementById('my-handoff-recent');
     this.myAuditLogs = document.getElementById('my-audit-logs');
@@ -2104,11 +2142,17 @@ class CareCircleApp {
       this.promptAddRecipient();
     });
 
-    // 新增照護對象
-    this.btnOpenAddRecipientModal.addEventListener('click', () => {
+    // 新增照護對象 (我自己家庭 / 其他照護夥伴)
+    this.btnAddFamilyRecipient?.addEventListener('click', () => {
+      this.promptAddRecipient('FAMILY');
+    });
+    this.btnAddPartnerRecipient?.addEventListener('click', () => {
+      this.promptAddRecipient('PARTNER');
+    });
+    this.btnOpenAddRecipientModal?.addEventListener('click', () => {
       this.promptAddRecipient();
     });
-    this.btnAddRecipientOpen.addEventListener('click', () => {
+    this.btnAddRecipientOpen?.addEventListener('click', () => {
       this.promptAddRecipient();
     });
 
@@ -3389,32 +3433,71 @@ class CareCircleApp {
     } else {
       // 家庭模式渲染
 
-      // 照護對象名單 (長輩 + 幼兒)
-      this.myRecipientsList.innerHTML = store.state.recipients.map(r => {
-        const isCurrent = r.id === store.getActiveRecipient().id;
-        const tagColor = r.type === 'CHILD' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-800';
+      // 照護對象名單：分開渲染「我自己家庭」與「其他照護夥伴」兩大區塊
+      const currentRec = store.getActiveRecipient();
+      const familyRecs = store.getFamilyRecipients();
+      const partnerRecs = store.getPartnerRecipients();
 
-        return `
-          <div class="p-3 bg-[#FAF6ED] rounded-xl border ${isCurrent ? 'border-brand-terracotta shadow-xs' : 'border-[#E8DFD3]'} flex items-center justify-between cursor-pointer btn-select-my-rec" data-rec-id="${r.id}">
-            <div class="flex items-center space-x-2">
-              <span class="text-2xl">${r.avatar}</span>
-              <div>
-                <div class="flex items-center space-x-1">
-                  <span class="font-bold text-xs text-[#2C241E]">${r.name}</span>
-                  ${isCurrent ? '<span class="text-[9px] bg-brand-terracotta text-white px-1.5 py-0.2 rounded-full font-semibold">當前</span>' : ''}
+      if (this.familyRecipientsCountBadge) {
+        this.familyRecipientsCountBadge.textContent = `${familyRecs.length} 位家庭成員`;
+      }
+      if (this.partnerRecipientsCountBadge) {
+        this.partnerRecipientsCountBadge.textContent = `社區夥伴支援 · ${partnerRecs.length} 位`;
+      }
+
+      // 1. 渲染「我自己家庭」對象列表 (王奶奶、王爺爺、林阿姨、小宇、糖糖)
+      if (this.myFamilyRecipientsList) {
+        this.myFamilyRecipientsList.innerHTML = familyRecs.map(r => {
+          const isCurrent = r.id === currentRec.id;
+          const tagColor = r.type === 'CHILD' ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-amber-100 text-amber-800 border border-amber-200';
+
+          return `
+            <div class="p-3 bg-[#FAF6ED] rounded-xl border transition cursor-pointer btn-select-my-rec ${isCurrent ? 'border-brand-terracotta ring-2 ring-brand-terracotta/20 bg-[#FAF0E1] shadow-xs' : 'border-[#E8DFD3] hover:border-[#D6C8B4]'}" data-rec-id="${r.id}">
+              <div class="flex items-center space-x-2.5">
+                <span class="text-2xl p-1 bg-white rounded-lg shadow-2xs">${r.avatar}</span>
+                <div class="truncate">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="font-bold text-xs text-[#2C241E]">${r.name}</span>
+                    ${isCurrent ? '<span class="text-[9px] bg-brand-terracotta text-white px-1.5 py-0.2 rounded-full font-bold">當前</span>' : ''}
+                  </div>
+                  <span class="text-[10px] ${tagColor} px-1.5 py-0.2 rounded font-medium mt-0.5 inline-block">${r.type === 'CHILD' ? '幼兒' : '長輩'} · ${r.relationship}</span>
                 </div>
-                <span class="text-[10px] ${tagColor} px-1.5 py-0.2 rounded font-medium">${r.type === 'CHILD' ? '幼兒' : '長輩'} · ${r.relationship}</span>
               </div>
             </div>
-          </div>
-        `;
-      }).join('');
+          `;
+        }).join('');
+      }
 
-      this.myRecipientsList.querySelectorAll('.btn-select-my-rec').forEach(b => {
+      // 2. 渲染「其他照護夥伴」對象列表 (林爺爺、陳奶奶)
+      if (this.myPartnerRecipientsList) {
+        this.myPartnerRecipientsList.innerHTML = partnerRecs.map(r => {
+          const isCurrent = r.id === currentRec.id;
+          return `
+            <div class="p-3 bg-[#F4F7F5] rounded-xl border transition cursor-pointer btn-select-my-rec ${isCurrent ? 'border-brand-sage ring-2 ring-brand-sage/20 bg-[#EBF2EE] shadow-xs' : 'border-[#CFDFD6] hover:border-[#B8CEC1]'}" data-rec-id="${r.id}">
+              <div class="flex items-center space-x-2.5">
+                <span class="text-2xl p-1 bg-white rounded-lg shadow-2xs">${r.avatar}</span>
+                <div class="truncate">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="font-bold text-xs text-[#1C2E24]">${r.name}</span>
+                    ${isCurrent ? '<span class="text-[9px] bg-brand-sage text-white px-1.5 py-0.2 rounded-full font-bold">當前</span>' : ''}
+                  </div>
+                  <span class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded font-medium mt-0.5 inline-block">${r.relationship}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 綁定所有卡片點選切換
+      document.querySelectorAll('.btn-select-my-rec').forEach(b => {
         b.addEventListener('click', () => {
           store.state.activeRecipientId = b.dataset.recId;
           store.save();
-          this.showToast(`已切換目前照顧對象為：${store.getActiveRecipient().name}`);
+          this.soundFX?.playCardShuffle();
+          const target = store.getActiveRecipient();
+          this.showToast(`已切換目前照顧對象為：${target.avatar} ${target.name}，全站紀錄已同步更新！`);
+          this.renderAll();
         });
       });
 
@@ -3811,18 +3894,26 @@ class CareCircleApp {
   renderRecipientDropdownItems() {
     if (!this.recipientDropdownItemsContainer) return;
     const currentRec = store.getActiveRecipient();
+    const familyRecs = store.getFamilyRecipients();
+    const partnerRecs = store.getPartnerRecipients();
 
-    this.recipientDropdownItemsContainer.innerHTML = store.state.recipients.map(r => {
+    const renderItem = (r, isPartner = false) => {
       const isSelected = r.id === currentRec.id;
       const typeBadge = r.type === 'CHILD'
         ? '<span class="text-[9px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.2 rounded border border-blue-200">幼兒</span>'
-        : '<span class="text-[9px] bg-amber-50 text-amber-800 font-bold px-1.5 py-0.2 rounded border border-amber-200">長輩</span>';
+        : (isPartner
+            ? '<span class="text-[9px] bg-emerald-50 text-emerald-800 font-bold px-1.5 py-0.2 rounded border border-emerald-200">夥伴</span>'
+            : '<span class="text-[9px] bg-amber-50 text-amber-800 font-bold px-1.5 py-0.2 rounded border border-amber-200">長輩</span>');
 
       const actCount = store.state.activities.filter(a => a.recipientId === r.id).length;
       const cardCount = store.state.activityCards.filter(c => c.recipientId === r.id).length;
+      const activeClass = isPartner
+        ? (isSelected ? 'bg-[#EBF2EE] border border-[#B8CEC1]' : 'hover:bg-[#F4F7F5] border border-transparent')
+        : (isSelected ? 'bg-[#FAF0E1] border border-[#E5D2BA]' : 'hover:bg-[#FAF6ED] border border-transparent');
+      const checkColor = isPartner ? 'text-brand-sage' : 'text-brand-terracotta';
 
       return `
-        <div class="flex items-center justify-between p-2 rounded-xl cursor-pointer transition ${isSelected ? 'bg-[#FAF0E1] border border-[#E5D2BA]' : 'hover:bg-[#FAF6ED] border border-transparent'} btn-dropdown-rec-item" data-rec-id="${r.id}">
+        <div class="flex items-center justify-between p-2 rounded-xl cursor-pointer transition ${activeClass} btn-dropdown-rec-item" data-rec-id="${r.id}">
           <div class="flex items-center space-x-2.5 truncate">
             <span class="text-xl shrink-0 p-1 bg-white rounded-lg shadow-2xs">${r.avatar}</span>
             <div class="truncate">
@@ -3835,11 +3926,38 @@ class CareCircleApp {
             </div>
           </div>
           <div class="shrink-0 ml-2">
-            ${isSelected ? '<span class="text-xs text-brand-terracotta font-bold">✓</span>' : ''}
+            ${isSelected ? `<span class="text-xs ${checkColor} font-bold">✓</span>` : ''}
           </div>
         </div>
       `;
-    }).join('');
+    };
+
+    let html = '';
+    // 區塊 1: 我自己家庭
+    html += `
+      <div class="px-2.5 py-1.5 flex items-center justify-between text-[11px] font-bold text-[#8A5A2B] bg-[#FAF3E8] rounded-lg mb-1 border border-[#EADAC5]">
+        <span class="flex items-center space-x-1.5"><span>🏡</span><span>我自己家庭</span></span>
+        <span class="text-[10px] bg-brand-terracotta/10 text-brand-terracotta px-1.5 py-0.2 rounded-full font-bold">${familyRecs.length} 位</span>
+      </div>
+      <div class="space-y-0.5 mb-2">
+        ${familyRecs.map(r => renderItem(r, false)).join('')}
+      </div>
+    `;
+
+    // 區塊 2: 其他照護夥伴
+    if (partnerRecs.length > 0) {
+      html += `
+        <div class="px-2.5 py-1.5 flex items-center justify-between text-[11px] font-bold text-[#1C2E24] bg-[#EBF2EE] rounded-lg mb-1 border border-[#CFDFD6]">
+          <span class="flex items-center space-x-1.5"><span>🤝</span><span>其他照護夥伴</span></span>
+          <span class="text-[10px] bg-brand-sage/15 text-brand-sage px-1.5 py-0.2 rounded-full font-bold">${partnerRecs.length} 位</span>
+        </div>
+        <div class="space-y-0.5">
+          ${partnerRecs.map(r => renderItem(r, true)).join('')}
+        </div>
+      `;
+    }
+
+    this.recipientDropdownItemsContainer.innerHTML = html;
 
     this.recipientDropdownItemsContainer.querySelectorAll('.btn-dropdown-rec-item').forEach(el => {
       el.addEventListener('click', (e) => {
@@ -3852,20 +3970,31 @@ class CareCircleApp {
         const updatedRec = store.getActiveRecipient();
         this.soundFX.playCardShuffle();
         this.showToast(`已切換為：${updatedRec.avatar} ${updatedRec.name}，全站紀錄已即時連動聚焦！`);
+        this.renderAll();
       });
     });
   }
 
   openRecipientModal() {
     const currentId = store.getActiveRecipient().id;
-    this.recipientsSelectionList.innerHTML = store.state.recipients.map(r => {
+    const familyRecs = store.getFamilyRecipients();
+    const partnerRecs = store.getPartnerRecipients();
+
+    const renderModalItem = (r, isPartner = false) => {
       const isSelected = r.id === currentId;
       const typeBadge = r.type === 'CHILD'
         ? '<span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">幼兒照護圈</span>'
-        : '<span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">長輩照護圈</span>';
+        : (isPartner
+            ? '<span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">社區夥伴</span>'
+            : '<span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">長輩照護圈</span>');
+
+      const borderClass = isPartner
+        ? (isSelected ? 'border-brand-sage bg-[#EBF2EE] ring-2 ring-brand-sage/20' : 'border-gray-200 hover:border-gray-300')
+        : (isSelected ? 'border-brand-terracotta bg-[#FAF6ED] ring-2 ring-brand-terracotta/20' : 'border-gray-200 hover:border-gray-300');
+      const activeTextColor = isPartner ? 'text-brand-sage' : 'text-brand-terracotta';
 
       return `
-        <div class="p-3 rounded-2xl border-2 cursor-pointer transition flex items-center justify-between ${isSelected ? 'border-brand-terracotta bg-[#FAF6ED]' : 'border-gray-200 hover:border-gray-300'} btn-select-rec-item" data-rec-id="${r.id}">
+        <div class="p-3 rounded-2xl border-2 cursor-pointer transition flex items-center justify-between ${borderClass} btn-select-rec-item" data-rec-id="${r.id}">
           <div class="flex items-center space-x-3">
             <span class="text-3xl p-1.5 bg-white rounded-xl shadow-2xs">${r.avatar}</span>
             <div>
@@ -3878,11 +4007,36 @@ class CareCircleApp {
           </div>
           <div class="text-right space-y-1">
             ${typeBadge}
-            ${isSelected ? '<div class="text-brand-terracotta font-bold text-xs">✓ 當前使用</div>' : ''}
+            ${isSelected ? `<div class="${activeTextColor} font-bold text-xs">✓ 當前使用</div>` : ''}
           </div>
         </div>
       `;
-    }).join('');
+    };
+
+    let modalHtml = '';
+    // 家庭區塊
+    modalHtml += `
+      <div class="text-xs font-bold text-[#8A5A2B] bg-[#FAF3E8] px-3 py-1.5 rounded-xl border border-[#EADAC5] flex items-center justify-between">
+        <span>🏡 我自己家庭 (${familyRecs.length} 位)</span>
+      </div>
+      <div class="space-y-2 pt-1 pb-2">
+        ${familyRecs.map(r => renderModalItem(r, false)).join('')}
+      </div>
+    `;
+
+    // 夥伴區塊
+    if (partnerRecs.length > 0) {
+      modalHtml += `
+        <div class="text-xs font-bold text-[#1C2E24] bg-[#EBF2EE] px-3 py-1.5 rounded-xl border border-[#CFDFD6] flex items-center justify-between mt-2">
+          <span>🤝 其他照護夥伴 (${partnerRecs.length} 位)</span>
+        </div>
+        <div class="space-y-2 pt-1 pb-2">
+          ${partnerRecs.map(r => renderModalItem(r, true)).join('')}
+        </div>
+      `;
+    }
+
+    this.recipientsSelectionList.innerHTML = modalHtml;
 
     this.recipientsSelectionList.querySelectorAll('.btn-select-rec-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -3890,49 +4044,61 @@ class CareCircleApp {
         store.save();
         this.modalSelectRecipient.classList.add('hidden');
         this.showToast(`已切換為：${store.getActiveRecipient().name}`);
+        this.renderAll();
       });
     });
 
     this.modalSelectRecipient.classList.remove('hidden');
   }
 
-  promptAddRecipient() {
-    const isChild = confirm('是否要新增【幼兒照護圈】成員？\n點擊「確定」新增幼兒；點擊「取消」新增長輩。');
-    const type = isChild ? 'CHILD' : 'ELDERLY';
-    const defaultName = isChild ? '糖糖' : '陳阿公';
-    const defaultRel = isChild ? '女兒' : '外公';
-    const defaultAge = isChild ? 5 : 79;
-    const defaultAvatar = isChild ? '👧' : '👴';
+  promptAddRecipient(targetCategory = 'FAMILY') {
+    const isPartner = targetCategory === 'PARTNER';
+    let isChild = false;
+    let type = 'ELDERLY';
 
-    const name = prompt(`請輸入照護對象暱稱：`, defaultName);
+    if (!isPartner) {
+      isChild = confirm('是否要新增【幼兒照護圈】成員？\n點擊「確定」新增幼兒；點擊「取消」新增長輩。');
+      type = isChild ? 'CHILD' : 'ELDERLY';
+    }
+
+    const defaultName = isPartner ? '張伯伯' : (isChild ? '糖糖' : '陳阿公');
+    const defaultRel = isPartner ? '獨居關懷長輩 (社區照護圈)' : (isChild ? '女兒' : '外公');
+    const defaultAge = isPartner ? 77 : (isChild ? 5 : 79);
+    const defaultAvatar = isPartner ? '👴' : (isChild ? '👧' : '👴');
+
+    const name = prompt(`請輸入${isPartner ? '【其他照護夥伴】' : '【我自己家庭】'}照護對象暱稱：`, defaultName);
     if (!name) return;
 
-    const rel = prompt(`與登入者的關係稱謂：`, defaultRel) || defaultRel;
+    const rel = prompt(`關係或備註稱謂：`, defaultRel) || defaultRel;
     const age = parseInt(prompt(`年齡：`, defaultAge)) || defaultAge;
+    const avatar = prompt(`頭像 Emoji：`, defaultAvatar) || defaultAvatar;
 
     const newRec = {
       id: 'rec-' + Date.now(),
+      category: isPartner ? 'PARTNER' : 'FAMILY',
       type,
       name,
       relationship: rel,
-      avatar: defaultAvatar,
+      avatar,
       age,
+      birthdate: '1950-01-01',
       careLevel: 'INDEPENDENT',
-      statusTags: [type === 'CHILD' ? '幼兒日常' : '銀髮健康', '溫馨照護'],
-      interests: type === 'CHILD' ? ['繪本', '積木', '公園'] : ['散步', '品茗', '音樂'],
+      statusTags: isPartner ? ['社區互助圈', '生活陪伴'] : [type === 'CHILD' ? '幼兒日常' : '銀髮健康', '家庭溫馨照護'],
+      interests: isPartner ? ['散步', '品茗', '音樂'] : (type === 'CHILD' ? ['繪本', '積木', '公園'] : ['散步', '品茗', '音樂']),
       mobilityScore: 4,
-      healthNotes: '注重水分補充與生活作息規律。',
+      healthNotes: isPartner ? '社區夥伴定期關懷陪伴。' : '注重水分補充與生活作息規律。',
       location: '台北市大安區',
       isDefault: false
     };
 
     store.state.recipients.push(newRec);
     store.state.activeRecipientId = newRec.id;
-    store.logAudit('新增照護對象', `${name} (${type === 'CHILD' ? '幼兒' : '長輩'})`);
+    store.logAudit('新增照護對象', `${name} (${isPartner ? '其他照護夥伴' : '我自己家庭'})`);
     store.save();
 
     this.modalSelectRecipient.classList.add('hidden');
-    this.showToast(`已成功新增 ${type === 'CHILD' ? '幼兒' : '長輩'}【${name}】！全站已同步切換。`);
+    this.showToast(`已成功新增${isPartner ? '其他照護夥伴' : '家庭'}對象【${name}】！全站已同步切換。`);
+    this.renderAll();
   }
 
   // ==========================================================================
