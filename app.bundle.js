@@ -2340,7 +2340,15 @@ class CareCircleApp {
   loadCaregiverApplication() {
     try {
       const data = localStorage.getItem('carecircle_caregiver_app');
-      return data ? JSON.parse(data) : null;
+      if (data) return JSON.parse(data);
+      const listRaw = localStorage.getItem('carecircle_caregiver_applications_list');
+      if (listRaw) {
+        const list = JSON.parse(listRaw);
+        if (Array.isArray(list) && list.length > 0) {
+          return list[0];
+        }
+      }
+      return null;
     } catch (e) {
       console.warn('載入照護夥伴申請紀錄失敗:', e);
       return null;
@@ -2424,6 +2432,17 @@ class CareCircleApp {
     // 重新補件/重新上傳按鈕
     this.btnCaregiverReupload?.addEventListener('click', () => {
       this.resetCaregiverApplication();
+    });
+
+    // 跨視窗即時監聽後台審查狀態 (Storage Event)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'carecircle_caregiver_app' || e.key === 'carecircle_caregiver_applications_list') {
+        this.caregiverApplication = this.loadCaregiverApplication();
+        this.updateCaregiverBannerState();
+        if (this.modalCaregiverUpload && !this.modalCaregiverUpload.classList.contains('hidden')) {
+          this.openCaregiverModal('status');
+        }
+      }
     });
   }
 
@@ -2511,33 +2530,78 @@ class CareCircleApp {
       this.btnSubmitCaregiverUpload.disabled = true;
       this.btnSubmitCaregiverUpload.innerHTML = `
         <span class="animate-spin inline-block mr-1">⏳</span>
-        <span>加密傳輸至管理者信箱中...</span>
+        <span>加密傳輸至管理者資料庫與信箱中...</span>
       `;
     }
 
     setTimeout(() => {
       // 建立申請資料紀錄
       const record = {
+        id: 'APP-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(100 + Math.random() * 900),
         status: 'pending',
+        statusLabel: '待審核',
         name,
         phone,
         email,
         adminEmail: 'admin@carecircle.tw',
-        files: this.caregiverUploadedFiles.map(f => ({ name: f.name, size: f.size })),
-        submittedAt: new Date().toISOString()
+        files: this.caregiverUploadedFiles.map(f => ({
+          name: f.name,
+          size: f.size,
+          type: f.name.includes('良民') ? 'police_record' : (f.name.includes('身分') ? 'id_card' : 'cert'),
+          uploadedAt: new Date().toISOString()
+        })),
+        submittedAt: new Date().toISOString(),
+        adminNotes: '',
+        resubmitReason: '',
+        reviewedBy: '',
+        reviewedAt: '',
+        auditTimeline: [
+          {
+            timestamp: new Date().toISOString(),
+            action: '前台使用者送出申請',
+            actor: `${name} (申請人)`,
+            detail: `已上傳資格審查文件：${fileNames}`
+          }
+        ]
       };
 
       try {
         localStorage.setItem('carecircle_caregiver_app', JSON.stringify(record));
+
+        // 同步寫入獨立後台審查清冊列表 carecircle_caregiver_applications_list
+        let list = [];
+        try {
+          const raw = localStorage.getItem('carecircle_caregiver_applications_list');
+          if (raw) list = JSON.parse(raw);
+        } catch(e) {}
+        if (!Array.isArray(list)) list = [];
+
+        const existingIdx = list.findIndex(item => item.email === record.email || (item.name === record.name && item.phone === record.phone));
+        if (existingIdx >= 0) {
+          record.id = list[existingIdx].id;
+          record.auditTimeline = [
+            ...(list[existingIdx].auditTimeline || []),
+            {
+              timestamp: new Date().toISOString(),
+              action: '前台重新送件 / 補件',
+              actor: `${name} (申請人)`,
+              detail: `補充上傳檔案：${fileNames}`
+            }
+          ];
+          list[existingIdx] = record;
+        } else {
+          list.unshift(record);
+        }
+        localStorage.setItem('carecircle_caregiver_applications_list', JSON.stringify(list));
       } catch (e) {
         console.warn(e);
       }
       this.caregiverApplication = record;
 
       // 寫入審計日誌
-      store.addAuditLog('照護夥伴申請', `申請人 ${name} 已上傳審核文件 [${fileNames}]，系統加密發送至管理者信箱 admin@carecircle.tw 審核`);
+      store.addAuditLog('照護夥伴申請', `申請人 ${name} 已上傳審核文件 [${fileNames}]，資料已加密儲存於管理後台資料庫，並派送 admin@carecircle.tw 審核`);
 
-      // 更新首頁 Banner 狀態為 "資料上傳中請稍待3~5天工作天"
+      // 更新首頁 Banner 狀態
       this.updateCaregiverBannerState();
 
       // 關閉 Modal 並提示
@@ -2551,53 +2615,153 @@ class CareCircleApp {
 
       // 播效音與 Toast 提示
       this.soundFX.playCardDraw();
-      this.showToast('✅ 申請資料與檔案已送達管理者信箱！目前審核中。');
-    }, 1200);
+      this.showToast('✅ 申請資料與檔案已成功送達管理後台！目前排入審核中。');
+    }, 1000);
   }
 
   updateCaregiverBannerState() {
     if (!this.caregiverBannerContainer) return;
-    if (this.caregiverApplication) {
-      this.caregiverBannerInitial?.classList.add('hidden');
-      this.caregiverBannerPending?.classList.remove('hidden');
-      this.caregiverBannerContainer.className = 'bg-gradient-to-r from-[#FFFBF2] to-[#FBF4E8] rounded-2xl p-4 border border-[#E5D2BA] shadow-xs transition-all duration-300';
+    this.caregiverApplication = this.loadCaregiverApplication();
+    const app = this.caregiverApplication;
 
-      // 渲染已確認檔名標籤
-      if (this.caregiverBannerFilesBadge) {
-        const files = this.caregiverApplication.files || [];
-        if (files.length > 0) {
-          this.caregiverBannerFilesBadge.innerHTML = files.map(f => `
-            <span class="inline-flex items-center space-x-1 bg-white/90 border border-[#E5D2BA] text-[#5C452F] px-2 py-0.5 rounded-lg shadow-2xs">
-              <span>${this.getFileIcon(f.name)}</span>
-              <span class="font-medium truncate max-w-[150px]">${f.name}</span>
-            </span>
-          `).join('');
-        } else {
-          this.caregiverBannerFilesBadge.innerHTML = '';
-        }
-      }
-    } else {
-      this.caregiverBannerInitial?.classList.remove('hidden');
-      this.caregiverBannerPending?.classList.add('hidden');
+    if (!app) {
       this.caregiverBannerContainer.className = 'bg-gradient-to-r from-[#FAF6ED] to-[#F3ECE0] rounded-2xl p-4 border border-[#E8DFD3] transition-all duration-300';
+      this.caregiverBannerContainer.innerHTML = `
+        <div id="caregiver-banner-initial" class="flex items-center justify-between">
+          <div class="space-y-0.5">
+            <span class="text-xs font-bold text-brand-sage flex items-center space-x-1">
+              <span>🤝</span>
+              <span>想要利用空閒時間陪伴鄰里長輩？</span>
+            </span>
+            <p class="text-xs text-gray-600">加入社區照護夥伴，彈性陪伴賺取報酬</p>
+          </div>
+          <button id="btn-apply-caregiver-open" class="text-xs bg-brand-sage text-white font-bold px-3 py-1.5 rounded-xl hover:bg-brand-sage-dark shadow-2xs transition">
+            成為照護夥伴
+          </button>
+        </div>
+      `;
+      document.getElementById('btn-apply-caregiver-open')?.addEventListener('click', () => {
+        this.openCaregiverModal('upload');
+      });
+      return;
+    }
+
+    const files = app.files || [];
+    const filesBadgeHTML = files.map(f => `
+      <span class="inline-flex items-center space-x-1 bg-white/90 border border-[#E5D2BA] text-[#5C452F] px-2 py-0.5 rounded-lg shadow-2xs">
+        <span>${this.getFileIcon(f.name)}</span>
+        <span class="font-medium truncate max-w-[150px]">${f.name}</span>
+      </span>
+    `).join('');
+
+    if (app.status === 'approved') {
+      this.caregiverBannerContainer.className = 'bg-gradient-to-r from-[#EBF6EE] to-[#DCEDE1] rounded-2xl p-4 border border-[#B7DDC3] shadow-xs transition-all duration-300 space-y-2.5';
+      this.caregiverBannerContainer.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="text-lg">🎉</span>
+            <span class="text-xs font-bold text-brand-sage-dark">照護夥伴資格審查通過！接單權限已開通</span>
+            <span class="text-[10px] bg-white text-brand-sage font-bold px-2 py-0.5 rounded-full border border-brand-sage/30">認證合格</span>
+          </div>
+          <button id="btn-goto-caregiver-desk" class="text-xs bg-brand-sage hover:bg-brand-sage-dark text-white font-bold px-3 py-1.5 rounded-xl shadow-xs transition">
+            前往夥伴工作台
+          </button>
+        </div>
+        <p class="text-[11px] text-gray-600">
+          後台審核專員已核可您的良民證與資格文件。${app.adminNotes ? `<span class="font-semibold text-brand-sage-dark">「${app.adminNotes}」</span>` : '您現在可在「🤝 照護夥伴工作台」查看社區接單需求。'}
+        </p>
+        <div class="flex flex-wrap gap-1.5 pt-0.5 text-[11px]">
+          ${filesBadgeHTML}
+        </div>
+      `;
+      document.getElementById('btn-goto-caregiver-desk')?.addEventListener('click', () => {
+        this.switchRoleMode('CAREGIVER');
+      });
+    } else if (app.status === 'require_info') {
+      this.caregiverBannerContainer.className = 'bg-gradient-to-r from-[#FFF8EE] to-[#FFF0DB] rounded-2xl p-4 border border-[#F2CEA2] shadow-xs transition-all duration-300 space-y-2.5';
+      this.caregiverBannerContainer.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="text-lg animate-bounce">⚠️</span>
+            <span class="text-xs font-bold text-brand-terracotta">審核小組通知：需補充或重傳證明文件</span>
+            <span class="text-[10px] bg-white text-brand-terracotta font-bold px-2 py-0.5 rounded-full border border-brand-terracotta/30">待補件</span>
+          </div>
+          <button id="btn-banner-resubmit-open" class="text-xs bg-brand-terracotta hover:bg-brand-terracotta-dark text-white font-bold px-3 py-1.5 rounded-xl shadow-xs transition">
+            立即補件上傳
+          </button>
+        </div>
+        <div class="bg-white/80 p-2.5 rounded-xl border border-[#F0D5B5] text-[11px] text-gray-700">
+          <strong>補件原因：</strong>${app.resubmitReason || app.adminNotes || '請檢查上傳之良民證或身分證件是否清晰無遮蔽。'}
+        </div>
+        <div class="flex flex-wrap gap-1.5 pt-0.5 text-[11px]">
+          ${filesBadgeHTML}
+        </div>
+      `;
+      document.getElementById('btn-banner-resubmit-open')?.addEventListener('click', () => {
+        this.openCaregiverModal('upload');
+      });
+    } else if (app.status === 'rejected') {
+      this.caregiverBannerContainer.className = 'bg-gradient-to-r from-[#FFF3F3] to-[#FDE8E8] rounded-2xl p-4 border border-[#F5C2C2] shadow-xs transition-all duration-300 space-y-2';
+      this.caregiverBannerContainer.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="text-lg">🚫</span>
+            <span class="text-xs font-bold text-red-700">照護夥伴資格查核未通過</span>
+          </div>
+          <button id="btn-banner-reapply" class="text-xs bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 font-bold px-3 py-1.5 rounded-xl transition">
+            重新申請
+          </button>
+        </div>
+        <p class="text-[11px] text-gray-600">
+          未通過原因：${app.resubmitReason || app.adminNotes || '檢附之文件不符合衛福部或平台資格規範。'}
+        </p>
+      `;
+      document.getElementById('btn-banner-reapply')?.addEventListener('click', () => {
+        this.resetCaregiverApplication();
+      });
+    } else {
+      this.caregiverBannerContainer.className = 'bg-gradient-to-r from-[#FFFBF2] to-[#FBF4E8] rounded-2xl p-4 border border-[#E5D2BA] shadow-xs transition-all duration-300 space-y-2.5';
+      this.caregiverBannerContainer.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="text-base animate-pulse">⏳</span>
+            <span class="text-xs font-bold text-[#8A5A2B]">資料上傳中請稍待3~5天工作天</span>
+            <span class="text-[10px] bg-[#FAF0E1] text-[#A26D34] font-semibold px-2 py-0.5 rounded-full border border-[#E8DFD3]">審核進行中</span>
+          </div>
+          <button id="btn-view-caregiver-status" class="text-xs bg-white text-brand-sage border border-brand-sage/40 hover:bg-[#EBF2EE] font-bold px-3 py-1 rounded-xl transition shadow-2xs">
+            查看審核進度
+          </button>
+        </div>
+        <p class="text-[11px] text-gray-600">
+          審核文件已加密存放至管理者資料庫 (<span class="font-mono text-brand-terracotta font-semibold">admin@carecircle.tw</span>)，專員正加速核對良民證與資格中。
+        </p>
+        <div class="flex flex-wrap gap-1.5 pt-0.5 text-[11px]">
+          ${filesBadgeHTML}
+        </div>
+      `;
+      document.getElementById('btn-view-caregiver-status')?.addEventListener('click', () => {
+        this.openCaregiverModal('status');
+      });
     }
   }
 
   openCaregiverModal(view = 'upload') {
     if (!this.modalCaregiverUpload) return;
+    this.caregiverApplication = this.loadCaregiverApplication();
 
     if (view === 'status' && this.caregiverApplication) {
       this.caregiverModalViewUpload?.classList.add('hidden');
       this.caregiverModalViewStatus?.classList.remove('hidden');
 
+      const app = this.caregiverApplication;
       // 填寫審核進度
-      if (this.caregiverStatusSubmitTime && this.caregiverApplication.submittedAt) {
-        const d = new Date(this.caregiverApplication.submittedAt);
-        this.caregiverStatusSubmitTime.textContent = `送達時間：${d.toLocaleDateString('zh-TW')} ${d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })} · 已進入分派序列`;
+      if (this.caregiverStatusSubmitTime && app.submittedAt) {
+        const d = new Date(app.submittedAt);
+        this.caregiverStatusSubmitTime.textContent = `送達時間：${d.toLocaleDateString('zh-TW')} ${d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })} · 已進入後台分派序列`;
       }
 
       if (this.caregiverStatusFilesList) {
-        const files = this.caregiverApplication.files || [];
+        const files = app.files || [];
         this.caregiverStatusFilesList.innerHTML = files.map(f => `
           <div class="flex items-center justify-between text-xs py-1 px-2 bg-[#FAF6ED] rounded-lg">
             <div class="flex items-center space-x-2 truncate">

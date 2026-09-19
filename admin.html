@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🛡️ 照護圈管理後台 · 照護夥伴審查系統 (Care Partner Admin)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              sage: '#4A7C59',
+              'sage-dark': '#2D5A43',
+              'sage-light': '#EBF2EE',
+              terracotta: '#D97736',
+              'terracotta-dark': '#B8581B',
+              warm: '#FAF6ED',
+              cream: '#FDFBF7'
+            }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans TC"', '"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 證件浮水印效果 */
+    .watermark {
+      background-image: repeating-linear-gradient(
+        -45deg,
+        rgba(74, 124, 89, 0.05),
+        rgba(74, 124, 89, 0.05) 30px,
+        rgba(74, 124, 89, 0.09) 30px,
+        rgba(74, 124, 89, 0.09) 60px
+      );
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #F4EFE6;
+      border-radius: 999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #D6C8B4;
+      border-radius: 999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #4A7C59;
+    }
+  </style>
+</head>
+<body class="bg-[#F6F3ED] text-[#2C241E] min-h-screen font-sans flex flex-col">
+
+  <!-- ========================================================================
+       後台頂部機密安全提示條 (Security Clearance Banner)
+       ======================================================================== -->
+  <aside aria-label="安全性宣告" class="bg-[#23352A] text-white px-4 py-2 text-xs flex flex-wrap items-center justify-between border-b border-[#344E3E] shadow-sm">
+    <div class="flex items-center space-x-2">
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#D97736] text-white tracking-wider">
+        RESTRICTED AREA
+      </span>
+      <span class="font-medium text-gray-200">
+        🔒 機密管理者後台 · 照護夥伴審查專用 · <strong class="text-amber-300">本頁面未在任何前台建立連結</strong>
+      </span>
+    </div>
+    <div class="flex items-center space-x-4 text-gray-300 text-[11px]">
+      <span class="flex items-center space-x-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        <span class="w-2 h-2 rounded-full bg-emerald-400 -ml-3.5"></span>
+        <span class="text-emerald-300 font-mono">前台資料庫連線正常 (Sync Active)</span>
+      </span>
+      <span class="hidden sm:inline text-gray-400">|</span>
+      <span class="hidden sm:inline text-gray-300" id="current-admin-display">
+        👤 當前審核員：<strong>林志豪 (資深審查專員)</strong>
+      </span>
+      <button id="btn-lock-screen" class="hover:text-amber-300 transition flex items-center space-x-1 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-[10px]">
+        <i data-lucide="lock" class="w-3 h-3"></i>
+        <span>快速鎖定後台</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ========================================================================
+       主導覽列 (Main Admin Navigation)
+       ======================================================================== -->
+  <header class="bg-white border-b border-[#E4D9C8] px-6 py-3.5 shadow-2xs sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      
+      <!-- 系統識別 -->
+      <div class="flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-2xl bg-brand-sage-dark text-white flex items-center justify-center text-xl shadow-sm">
+          🛡️
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="font-bold text-lg text-[#1C2E24] tracking-tight">照護圈 · 照護夥伴審查管理中心</h1>
+            <span class="text-[10px] bg-[#EBF2EE] text-brand-sage border border-brand-sage/30 px-2 py-0.5 rounded-full font-bold">
+              v1.2.0 Admin
+            </span>
+          </div>
+          <p class="text-xs text-gray-500">審核良民證、照顧員證書、身分證件與開通接單資格</p>
+        </div>
+      </div>
+
+      <!-- 操作快捷按鈕 -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btn-refresh-data" class="px-3 py-1.5 bg-[#FAF6ED] hover:bg-[#F2ECE0] text-gray-700 text-xs font-semibold rounded-xl border border-[#DCD0BE] flex items-center space-x-1.5 transition active:scale-95">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span>重新整理</span>
+        </button>
+
+        <button id="btn-mock-submit" class="px-3 py-1.5 bg-[#EBF2EE] hover:bg-[#DCEAE1] text-brand-sage-dark text-xs font-semibold rounded-xl border border-brand-sage/30 flex items-center space-x-1.5 transition active:scale-95">
+          <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+          <span>模擬前台新送件</span>
+        </button>
+
+        <button id="btn-export-json" class="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl border border-[#DCD0BE] flex items-center space-x-1.5 transition active:scale-95">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>匯出審查清冊</span>
+        </button>
+
+        <button id="btn-reset-seed" class="px-2.5 py-1.5 bg-white hover:bg-red-50 text-gray-400 hover:text-red-600 text-xs rounded-xl border border-dashed border-gray-300 transition" title="重設為系統預設示範資料">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       主內容區 (Dashboard Main Container)
+       ======================================================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- KPI 統計總覽卡片 (Dashboard Cards) -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
+      
+      <!-- 總申請數 -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E4D9C8] shadow-2xs space-y-1">
+        <div class="flex items-center justify-between text-xs text-gray-500 font-medium">
+          <span>總申請件數</span>
+          <span class="p-1.5 rounded-lg bg-[#FAF6ED] text-gray-600">📋</span>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="stat-total-count" class="text-2xl font-black text-gray-800">0</span>
+          <span class="text-[11px] text-gray-400">件</span>
+        </div>
+        <p class="text-[10px] text-gray-400 truncate">所有遞交申請之總和</p>
+      </div>
+
+      <!-- 待審核 (優先處理) -->
+      <div class="bg-gradient-to-br from-[#FFFBF4] to-[#FFF3DC] rounded-2xl p-4 border border-[#F0D5A8] shadow-2xs space-y-1 relative overflow-hidden">
+        <div class="absolute -right-2 -bottom-2 opacity-10 text-amber-600 text-5xl font-black select-none pointer-events-none">⏳</div>
+        <div class="flex items-center justify-between text-xs text-[#995E13] font-bold">
+          <span>待審核 (待處理)</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="stat-pending-count" class="text-2xl font-black text-[#874F06]">0</span>
+          <span class="text-[11px] text-amber-700 font-medium">件待核對</span>
+        </div>
+        <p class="text-[10px] text-[#A66D26]">需查驗良民證與身分證</p>
+      </div>
+
+      <!-- 待補件 -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E4D9C8] shadow-2xs space-y-1">
+        <div class="flex items-center justify-between text-xs text-brand-terracotta font-bold">
+          <span>待補件中</span>
+          <span class="p-1.5 rounded-lg bg-orange-50 text-brand-terracotta">⚠️</span>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="stat-resubmit-count" class="text-2xl font-black text-brand-terracotta">0</span>
+          <span class="text-[11px] text-gray-400">件</span>
+        </div>
+        <p class="text-[10px] text-gray-400 truncate">已通知申請人補充文件</p>
+      </div>
+
+      <!-- 審核通過 (正式夥伴) -->
+      <div class="bg-white rounded-2xl p-4 border border-[#D5E5DA] shadow-2xs space-y-1">
+        <div class="flex items-center justify-between text-xs text-brand-sage font-bold">
+          <span>審核已通過</span>
+          <span class="p-1.5 rounded-lg bg-[#EBF2EE] text-brand-sage">✅</span>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="stat-approved-count" class="text-2xl font-black text-brand-sage-dark">0</span>
+          <span class="text-[11px] text-gray-400">位</span>
+        </div>
+        <p class="text-[10px] text-gray-400 truncate">已開通工作台接單權限</p>
+      </div>
+
+      <!-- 已駁回 -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E4D9C8] shadow-2xs space-y-1 col-span-2 md:col-span-1">
+        <div class="flex items-center justify-between text-xs text-gray-500 font-medium">
+          <span>不予受理 / 駁回</span>
+          <span class="p-1.5 rounded-lg bg-gray-100 text-gray-500">🚫</span>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="stat-rejected-count" class="text-2xl font-black text-gray-600">0</span>
+          <span class="text-[11px] text-gray-400">件</span>
+        </div>
+        <p class="text-[10px] text-gray-400 truncate">資格未符或證件異常</p>
+      </div>
+
+    </div>
+
+    <!-- 搜尋、狀態篩選與工作列 (Filter & Search) -->
+    <div class="bg-white rounded-2xl p-4 border border-[#E4D9C8] shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      
+      <!-- 狀態 Filter Tabs -->
+      <div class="flex flex-wrap items-center gap-1.5" id="filter-tabs-container">
+        <button data-filter="ALL" class="filter-tab active px-3 py-1.5 rounded-xl text-xs font-bold transition bg-brand-sage text-white shadow-xs">
+          全部清單 (<span id="tab-count-all">0</span>)
+        </button>
+        <button data-filter="pending" class="filter-tab px-3 py-1.5 rounded-xl text-xs font-bold transition bg-[#FAF6ED] text-gray-700 hover:bg-[#F1E9DA]">
+          ⏳ 待審核 (<span id="tab-count-pending">0</span>)
+        </button>
+        <button data-filter="require_info" class="filter-tab px-3 py-1.5 rounded-xl text-xs font-bold transition bg-[#FAF6ED] text-gray-700 hover:bg-[#F1E9DA]">
+          ⚠️ 待補件 (<span id="tab-count-require">0</span>)
+        </button>
+        <button data-filter="approved" class="filter-tab px-3 py-1.5 rounded-xl text-xs font-bold transition bg-[#FAF6ED] text-gray-700 hover:bg-[#F1E9DA]">
+          ✅ 已通過 (<span id="tab-count-approved">0</span>)
+        </button>
+        <button data-filter="rejected" class="filter-tab px-3 py-1.5 rounded-xl text-xs font-bold transition bg-[#FAF6ED] text-gray-700 hover:bg-[#F1E9DA]">
+          🚫 已駁回 (<span id="tab-count-rejected">0</span>)
+        </button>
+      </div>
+
+      <!-- 關鍵字搜尋與排序 -->
+      <div class="flex items-center space-x-2 w-full md:w-auto">
+        <div class="relative flex-1 md:w-64">
+          <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-2.5"></i>
+          <input id="input-search" type="text" placeholder="搜尋申請人姓名、電話、檔名..." class="w-full bg-[#FAF6ED] border border-[#DCD0BE] rounded-xl pl-9 pr-3 py-1.5 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-brand-sage focus:bg-white transition">
+        </div>
+
+        <select id="select-sort" class="bg-[#FAF6ED] border border-[#DCD0BE] rounded-xl px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-brand-sage font-medium">
+          <option value="newest">最新提交優先</option>
+          <option value="oldest">最早提交優先</option>
+          <option value="status">依審核狀態</option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- 申請案件資料列表 (Applications Table) -->
+    <div class="bg-white rounded-2xl border border-[#E4D9C8] shadow-2xs overflow-hidden">
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-[#FAF6ED] border-b border-[#E4D9C8] text-gray-600 font-bold">
+              <th class="py-3 px-4 w-32">案號 / 狀態</th>
+              <th class="py-3 px-4 w-52">申請人資訊</th>
+              <th class="py-3 px-4">檢附審查證件 (點擊檢視)</th>
+              <th class="py-3 px-4 w-44">提交與審核歷程</th>
+              <th class="py-3 px-4 text-center w-36">審查操作</th>
+            </tr>
+          </thead>
+          <tbody id="applications-table-body" class="divide-y divide-[#EFE7DB]">
+            <!-- 動態注入表格內容 -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 空狀態提示 (Empty State) -->
+      <div id="table-empty-state" class="hidden py-14 text-center space-y-3">
+        <div class="w-14 h-14 bg-[#FAF6ED] rounded-full flex items-center justify-center text-2xl mx-auto text-gray-400">
+          🔍
+        </div>
+        <div class="space-y-1">
+          <p class="font-bold text-gray-700 text-sm">查無符合條件的申請案件</p>
+          <p class="text-xs text-gray-400">請嘗試清除搜尋條件，或點擊上方「模擬前台新送件」新增測試資料</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 頁尾安全聲明與審計說明 -->
+    <div class="rounded-2xl bg-[#EFE9DE] p-4 border border-[#DCD0BE] text-[11px] text-gray-600 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center space-x-2">
+        <span class="text-base">🛡️</span>
+        <span>
+          <strong>個人資料保護承諾：</strong> 本後台所存取之警察刑事紀錄證明書 (良民證) 與國民身分證影本均依法受個資法保護，嚴禁外流或無授權截圖。
+        </span>
+      </div>
+      <span class="font-mono text-gray-500 shrink-0">Audit Engine: LocalStore v1.2</span>
+    </div>
+
+  </main>
+
+  <!-- ========================================================================
+       MODAL 1: 審核作業與證件檢視詳情彈窗 (Review & Credentials Modal)
+       ======================================================================== -->
+  <div id="modal-review-detail" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-3xl rounded-3xl border border-[#DCD0BE] shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-[#E4D9C8] flex items-center justify-between bg-[#FAF6ED]">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-2xl bg-brand-sage text-white flex items-center justify-center text-lg font-bold shadow-2xs">
+            📋
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="font-bold text-base text-gray-900" id="modal-applicant-name">陳美玲</h2>
+              <span id="modal-status-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                審核中
+              </span>
+              <span id="modal-application-id" class="text-gray-400 font-mono text-xs">
+                APP-20260919-001
+              </span>
+            </div>
+            <p class="text-xs text-gray-500">審查良民證有效期限、身分證明真實性與長照受訓字號</p>
+          </div>
+        </div>
+
+        <button id="btn-close-modal" class="p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (滾動區域) -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar bg-[#FAF9F5]">
+        
+        <!-- 申請人基本資訊小卡 -->
+        <div class="bg-white rounded-2xl p-4 border border-[#E4D9C8] shadow-2xs space-y-3">
+          <h3 class="text-xs font-bold text-gray-800 flex items-center space-x-1.5 border-b border-gray-100 pb-2">
+            <span>👤 申請人通訊與身分資料</span>
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div class="bg-[#FAF6ED] p-2.5 rounded-xl border border-[#E8DFC9]">
+              <span class="text-gray-500 text-[10px] block">真實姓名</span>
+              <span id="modal-info-name" class="font-bold text-gray-800 text-sm">陳美玲</span>
+            </div>
+            <div class="bg-[#FAF6ED] p-2.5 rounded-xl border border-[#E8DFC9]">
+              <span class="text-gray-500 text-[10px] block">聯絡手機</span>
+              <span id="modal-info-phone" class="font-mono font-bold text-gray-800 text-sm">0912-345-678</span>
+            </div>
+            <div class="bg-[#FAF6ED] p-2.5 rounded-xl border border-[#E8DFC9]">
+              <span class="text-gray-500 text-[10px] block">通知 Email</span>
+              <span id="modal-info-email" class="font-mono text-gray-800 truncate block">meiling.chen@example.com</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-[11px] text-gray-500 pt-1">
+            <span>提交時間：<strong id="modal-info-submittime" class="font-mono text-gray-700">2026-09-19 08:30</strong></span>
+            <span>遞送信箱：<strong class="font-mono text-brand-terracotta">admin@carecircle.tw</strong></span>
+          </div>
+        </div>
+
+        <!-- 檢附文件清單與模擬預覽切換 -->
+        <div class="bg-white rounded-2xl p-4 border border-[#E4D9C8] shadow-2xs space-y-3">
+          <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+            <h3 class="text-xs font-bold text-gray-800 flex items-center space-x-1.5">
+              <span>📁 檢附資格證明文件核對 (<span id="modal-files-count">3</span> 件)</span>
+            </h3>
+            <span class="text-[10px] bg-[#EBF2EE] text-brand-sage px-2 py-0.5 rounded font-bold">
+              已驗證加密歸檔
+            </span>
+          </div>
+
+          <!-- 檔案標籤清單 -->
+          <div id="modal-files-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <!-- 動態產生各檔案項目 -->
+          </div>
+
+          <!-- 證件模擬預覽視圖 (Credential Previewer Box) -->
+          <div class="mt-3 border-2 border-dashed border-[#DCD0BE] rounded-2xl p-4 bg-[#FAF6ED] watermark space-y-3 relative">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-brand-sage-dark flex items-center space-x-1">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                <span id="preview-box-title">證件即時預覽核實</span>
+              </span>
+              <span class="text-[10px] bg-brand-terracotta text-white font-bold px-2 py-0.5 rounded-full shadow-2xs">
+                機密浮水印：照護圈審核專用
+              </span>
+            </div>
+
+            <!-- 預覽容器 -->
+            <div id="preview-box-content" class="bg-white rounded-xl p-4 border border-[#DCD0BE] shadow-sm min-h-[140px] flex flex-col justify-center items-center text-center space-y-2">
+              <!-- 預覽內容 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 審查決策操作工作面板 (Decision Panel) -->
+        <div class="bg-white rounded-2xl p-4 border-2 border-brand-sage/40 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+            <h3 class="text-xs font-bold text-gray-800 flex items-center space-x-1.5">
+              <span>⚖️ 審查專員決策工作區</span>
+            </h3>
+            <span class="text-[10px] text-gray-400">決策將同步更新至前台使用者狀態</span>
+          </div>
+
+          <!-- 決策三選一 Radio Cards -->
+          <div class="grid grid-cols-3 gap-2.5">
+            
+            <!-- 核准通過 -->
+            <label class="cursor-pointer">
+              <input type="radio" name="review_decision" value="approved" class="peer hidden">
+              <div class="p-3 rounded-xl border border-gray-200 peer-checked:border-brand-sage peer-checked:bg-[#EBF2EE] peer-checked:text-brand-sage-dark text-gray-600 hover:border-gray-300 transition text-center space-y-1">
+                <div class="text-xl">✅</div>
+                <div class="font-bold text-xs">審核通過</div>
+                <div class="text-[10px] text-gray-500 peer-checked:text-brand-sage">開通夥伴工作台</div>
+              </div>
+            </label>
+
+            <!-- 要求補件 -->
+            <label class="cursor-pointer">
+              <input type="radio" name="review_decision" value="require_info" class="peer hidden">
+              <div class="p-3 rounded-xl border border-gray-200 peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-900 text-gray-600 hover:border-gray-300 transition text-center space-y-1">
+                <div class="text-xl">⚠️</div>
+                <div class="font-bold text-xs">通知補件</div>
+                <div class="text-[10px] text-gray-500 peer-checked:text-amber-800">缺件或照片模糊</div>
+              </div>
+            </label>
+
+            <!-- 審核駁回 -->
+            <label class="cursor-pointer">
+              <input type="radio" name="review_decision" value="rejected" class="peer hidden">
+              <div class="p-3 rounded-xl border border-gray-200 peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-900 text-gray-600 hover:border-gray-300 transition text-center space-y-1">
+                <div class="text-xl">🚫</div>
+                <div class="font-bold text-xs">審核駁回</div>
+                <div class="text-[10px] text-gray-500 peer-checked:text-red-800">資格不符規定</div>
+              </div>
+            </label>
+
+          </div>
+
+          <!-- 快速理由範本按鍵 -->
+          <div class="space-y-1.5">
+            <span class="text-[11px] text-gray-500 font-medium">常見備註 / 補件理由快捷範本：</span>
+            <div class="flex flex-wrap gap-1.5 text-[11px]">
+              <button type="button" class="quick-template-btn bg-[#FAF6ED] hover:bg-[#F2ECE0] text-gray-700 px-2 py-0.5 rounded-lg border border-[#DCD0BE] transition">
+                良民證開立日期已逾3個月，請至警察局換發新證
+              </button>
+              <button type="button" class="quick-template-btn bg-[#FAF6ED] hover:bg-[#F2ECE0] text-gray-700 px-2 py-0.5 rounded-lg border border-[#DCD0BE] transition">
+                身分證反面照片模糊或遺漏，請重新拍攝清晰正面與反面
+              </button>
+              <button type="button" class="quick-template-btn bg-[#FAF6ED] hover:bg-[#F2ECE0] text-gray-700 px-2 py-0.5 rounded-lg border border-[#DCD0BE] transition">
+                證照文件齊備完整，已核可開通社區照護夥伴接單權限
+              </button>
+            </div>
+          </div>
+
+          <!-- 審查專員填寫欄位 -->
+          <div class="space-y-2 text-xs">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-gray-600 font-medium mb-1">審查專員姓名</label>
+                <input id="input-reviewer-name" type="text" value="林志豪 (資深審查專員)" class="w-full bg-[#FAF6ED] border border-[#DCD0BE] rounded-xl px-3 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-brand-sage">
+              </div>
+              <div>
+                <label class="block text-gray-600 font-medium mb-1">查驗系統紀錄字號</label>
+                <input id="input-audit-ref" type="text" readonly value="CHK-POLICE-PASS-2026" class="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-mono text-gray-600">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-gray-600 font-medium mb-1">
+                審查意見與對外通知備註 (將顯示於前台使用者畫面)
+              </label>
+              <textarea id="textarea-review-notes" rows="2" placeholder="請填寫審查備註、通過祝賀語，或若為補件請詳細註明缺漏項目..." class="w-full bg-[#FAF6ED] border border-[#DCD0BE] rounded-xl p-2.5 text-xs text-gray-800 focus:outline-none focus:border-brand-sage focus:bg-white transition"></textarea>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 審計時間軸 (Audit Timeline) -->
+        <div class="bg-white rounded-2xl p-4 border border-[#E4D9C8] shadow-2xs space-y-2.5">
+          <h3 class="text-xs font-bold text-gray-800 flex items-center space-x-1.5">
+            <span>📜 案件審計歷史與時間軸 (Audit Trail)</span>
+          </h3>
+          <div id="modal-audit-timeline" class="space-y-2 text-xs max-h-36 overflow-y-auto font-mono text-[11px] divide-y divide-gray-50">
+            <!-- 動態載入 -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer 操作按鈕 -->
+      <div class="px-6 py-3.5 border-t border-[#E4D9C8] bg-white flex items-center justify-between">
+        <button id="btn-delete-application" class="text-red-500 hover:text-red-700 text-xs font-bold flex items-center space-x-1 px-2 py-1 rounded-lg hover:bg-red-50 transition">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>刪除此案件</span>
+        </button>
+
+        <div class="flex items-center space-x-2">
+          <button id="btn-cancel-modal" class="px-4 py-2 rounded-xl border border-[#DCD0BE] bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold transition">
+            取消返回
+          </button>
+          <button id="btn-save-decision" class="px-5 py-2 rounded-xl bg-brand-sage hover:bg-brand-sage-dark text-white text-xs font-bold transition shadow-sm flex items-center space-x-1.5 active:scale-95">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>儲存並發布審查結果</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 2: 獨立後台密碼安全鎖定畫面 (Passcode Lock Screen)
+       ======================================================================== -->
+  <div id="lock-screen-overlay" class="fixed inset-0 z-50 bg-[#1A261F]/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 border border-[#344E3E] shadow-2xl text-center space-y-5">
+      
+      <div class="w-16 h-16 rounded-3xl bg-[#EBF2EE] text-brand-sage-dark flex items-center justify-center text-3xl mx-auto shadow-sm">
+        🔒
+      </div>
+
+      <div class="space-y-1">
+        <h2 class="font-bold text-lg text-gray-900">照護圈管理後台 · 權限驗證</h2>
+        <p class="text-xs text-gray-500">
+          此頁面獨立於使用者前台，請驗證管理者身分以檢視申請人良民證等機密資料。
+        </p>
+      </div>
+
+      <!-- PIN 輸入框 -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-center space-x-2">
+          <input id="input-admin-pin" type="password" maxlength="6" placeholder="請輸入 PIN 碼 (預設: 8888)" class="w-full text-center tracking-widest text-lg font-mono bg-[#FAF6ED] border-2 border-[#DCD0BE] rounded-2xl py-3 focus:outline-none focus:border-brand-sage transition">
+        </div>
+        <p id="lock-error-hint" class="text-xs text-red-500 font-medium hidden">PIN 碼錯誤，請重新輸入！</p>
+      </div>
+
+      <!-- 按鈕 -->
+      <div class="space-y-2">
+        <button id="btn-submit-unlock" class="w-full py-3 bg-brand-sage hover:bg-brand-sage-dark text-white font-bold rounded-2xl text-xs shadow-md transition active:scale-95">
+          確認解鎖後台
+        </button>
+        <button id="btn-quick-unlock" class="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl text-[11px] transition">
+          ⚡ 點此一鍵快速解鎖 (Demo 便捷驗證)
+        </button>
+      </div>
+
+      <div class="pt-2 border-t border-gray-100 text-[10px] text-gray-400">
+        🔒 照護圈隱私保護機制 · 未授權人員請立即關閉本視窗
+      </div>
+    </div>
+  </div>
+
+  <!-- 全局 Toast 提示容器 -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- ========================================================================
+       後台主腳本 (Admin Core Logic)
+       ======================================================================== -->
+  <script>
+    // 預設示範種子資料 (Demo Seed Applications)
+    const DEFAULT_SEED_APPLICATIONS = [
+      {
+        id: 'APP-20260919-001',
+        name: '陳美玲',
+        phone: '0912-345-678',
+        email: 'meiling.chen@example.com',
+        submittedAt: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
+        status: 'pending',
+        statusLabel: '待審核',
+        files: [
+          { name: '良民證_陳美玲_202609.pdf', size: 1420500, type: 'police_record', uploadedAt: new Date().toISOString() },
+          { name: '長照照顧服務員結業證書.jpg', size: 2840000, type: 'cert', uploadedAt: new Date().toISOString() },
+          { name: '身分證正反面影本.png', size: 920000, type: 'id_card', uploadedAt: new Date().toISOString() }
+        ],
+        adminNotes: '',
+        resubmitReason: '',
+        reviewedBy: '',
+        reviewedAt: '',
+        auditTimeline: [
+          {
+            timestamp: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
+            action: '前台送出申請',
+            actor: '陳美玲 (申請人)',
+            detail: '已送出個人身分資料與 3 份資格查驗附件'
+          }
+        ]
+      },
+      {
+        id: 'APP-20260918-002',
+        name: '張雅婷',
+        phone: '0921-888-999',
+        email: 'yating.chang@example.com',
+        submittedAt: new Date(Date.now() - 3600 * 1000 * 26).toISOString(),
+        status: 'approved',
+        statusLabel: '審核通過',
+        files: [
+          { name: '警察刑事紀錄證明書_新北市警局.pdf', size: 1850000, type: 'police_record', uploadedAt: new Date().toISOString() },
+          { name: 'CPR_AED_急救合格證照.pdf', size: 840000, type: 'cert', uploadedAt: new Date().toISOString() },
+          { name: '中華民國國民身分證.png', size: 1100000, type: 'id_card', uploadedAt: new Date().toISOString() }
+        ],
+        adminNotes: '身分證無誤，良民證查核發證日為2週前，核准照護夥伴接單權限。',
+        resubmitReason: '',
+        reviewedBy: '林志豪 (資深審查專員)',
+        reviewedAt: new Date(Date.now() - 3600 * 1000 * 20).toISOString(),
+        auditTimeline: [
+          {
+            timestamp: new Date(Date.now() - 3600 * 1000 * 26).toISOString(),
+            action: '前台送出申請',
+            actor: '張雅婷 (申請人)',
+            detail: '送出良民證與CPR證照'
+          },
+          {
+            timestamp: new Date(Date.now() - 3600 * 1000 * 20).toISOString(),
+            action: '審查通過',
+            actor: '林志豪 (資深審查專員)',
+            detail: '核准開通接單服務權限'
+          }
+        ]
+      },
+      {
+        id: 'APP-20260917-003',
+        name: '李大衛',
+        phone: '0933-777-111',
+        email: 'david.lee@example.com',
+        submittedAt: new Date(Date.now() - 3600 * 1000 * 50).toISOString(),
+        status: 'require_info',
+        statusLabel: '待補件',
+        files: [
+          { name: '身分證正面.jpg', size: 640000, type: 'id_card', uploadedAt: new Date().toISOString() },
+          { name: '良民證舊檔_2025年.pdf', size: 1200000, type: 'police_record', uploadedAt: new Date().toISOString() }
+        ],
+        adminNotes: '良民證已逾期超過 8 個月，且缺身分證反面照片。',
+        resubmitReason: '良民證開立日期已逾3個月（需最近90天內核發），且缺少身分證反面照片，請重新拍照補正上傳。',
+        reviewedBy: '林志豪 (資深審查專員)',
+        reviewedAt: new Date(Date.now() - 3600 * 1000 * 42).toISOString(),
+        auditTimeline: [
+          {
+            timestamp: new Date(Date.now() - 3600 * 1000 * 50).toISOString(),
+            action: '前台送出申請',
+            actor: '李大衛 (申請人)',
+            detail: '初次送件'
+          },
+          {
+            timestamp: new Date(Date.now() - 3600 * 1000 * 42).toISOString(),
+            action: '通知補件',
+            actor: '林志豪 (資深審查專員)',
+            detail: '發送補件通知：良民證逾期、缺身分證反面'
+          }
+        ]
+      },
+      {
+        id: 'APP-20260915-004',
+        name: '趙小飛',
+        phone: '0955-222-333',
+        email: 'fei.zhao@example.com',
+        submittedAt: new Date(Date.now() - 3600 * 1000 * 96).toISOString(),
+        status: 'rejected',
+        statusLabel: '已駁回',
+        files: [
+          { name: '文件截圖.jpg', size: 410000, type: 'other', uploadedAt: new Date().toISOString() }
+        ],
+        adminNotes: '上傳文件非官方格式，且有明顯塗改痕跡。',
+        resubmitReason: '證照文件不符合衛福部規範且資料模糊，經查核不予受理。',
+        reviewedBy: '林志豪 (資深審查專員)',
+        reviewedAt: new Date(Date.now() - 3600 * 1000 * 90).toISOString(),
+        auditTimeline: [
+          {
+            timestamp: new Date(Date.now() - 3600 * 1000 * 96).toISOString(),
+            action: '前台送出申請',
+            actor: '趙小飛 (申請人)',
+            detail: '初次送件'
+          },
+          {
+            timestamp: new Date(Date.now() - 3600 * 1000 * 90).toISOString(),
+            action: '審查駁回',
+            actor: '林志豪 (資深審查專員)',
+            detail: '文件不符規範，予以駁回'
+          }
+        ]
+      }
+    ];
+
+    class AdminPortal {
+      constructor() {
+        this.storageKey = 'carecircle_caregiver_applications_list';
+        this.activeFilter = 'ALL';
+        this.searchQuery = '';
+        this.sortBy = 'newest';
+        this.currentEditingId = null;
+        this.isLocked = false;
+
+        this.initDOM();
+        this.initData();
+        this.bindEvents();
+        this.render();
+      }
+
+      initDOM() {
+        this.tableBody = document.getElementById('applications-table-body');
+        this.tableEmptyState = document.getElementById('table-empty-state');
+        this.inputSearch = document.getElementById('input-search');
+        this.selectSort = document.getElementById('select-sort');
+        this.btnRefresh = document.getElementById('btn-refresh-data');
+        this.btnMockSubmit = document.getElementById('btn-mock-submit');
+        this.btnExport = document.getElementById('btn-export-json');
+        this.btnResetSeed = document.getElementById('btn-reset-seed');
+        this.btnLockScreen = document.getElementById('btn-lock-screen');
+        
+        // Modal 元素
+        this.modalReview = document.getElementById('modal-review-detail');
+        this.btnCloseModal = document.getElementById('btn-close-modal');
+        this.btnCancelModal = document.getElementById('btn-cancel-modal');
+        this.btnSaveDecision = document.getElementById('btn-save-decision');
+        this.btnDeleteApplication = document.getElementById('btn-delete-application');
+        this.modalApplicantName = document.getElementById('modal-applicant-name');
+        this.modalStatusBadge = document.getElementById('modal-status-badge');
+        this.modalApplicationId = document.getElementById('modal-application-id');
+        this.modalInfoName = document.getElementById('modal-info-name');
+        this.modalInfoPhone = document.getElementById('modal-info-phone');
+        this.modalInfoEmail = document.getElementById('modal-info-email');
+        this.modalInfoSubmitTime = document.getElementById('modal-info-submittime');
+        this.modalFilesCount = document.getElementById('modal-files-count');
+        this.modalFilesList = document.getElementById('modal-files-list');
+        this.modalAuditTimeline = document.getElementById('modal-audit-timeline');
+        this.previewBoxTitle = document.getElementById('preview-box-title');
+        this.previewBoxContent = document.getElementById('preview-box-content');
+        this.inputReviewerName = document.getElementById('input-reviewer-name');
+        this.textareaReviewNotes = document.getElementById('textarea-review-notes');
+
+        // Lock Screen 元素
+        this.lockScreenOverlay = document.getElementById('lock-screen-overlay');
+        this.inputAdminPin = document.getElementById('input-admin-pin');
+        this.lockErrorHint = document.getElementById('lock-error-hint');
+        this.btnSubmitUnlock = document.getElementById('btn-submit-unlock');
+        this.btnQuickUnlock = document.getElementById('btn-quick-unlock');
+      }
+
+      initData() {
+        let storedList = null;
+        try {
+          const raw = localStorage.getItem(this.storageKey);
+          if (raw) storedList = JSON.parse(raw);
+        } catch(e) {
+          console.warn(e);
+        }
+
+        if (!storedList || !Array.isArray(storedList) || storedList.length === 0) {
+          storedList = JSON.parse(JSON.stringify(DEFAULT_SEED_APPLICATIONS));
+          this.saveApplications(storedList);
+        }
+
+        // 檢查是否有來自前台的最新申請單 (carecircle_caregiver_app)
+        try {
+          const singleAppRaw = localStorage.getItem('carecircle_caregiver_app');
+          if (singleAppRaw) {
+            const singleApp = JSON.parse(singleAppRaw);
+            if (singleApp && singleApp.name) {
+              const exists = storedList.some(item => item.email === singleApp.email || (item.name === singleApp.name && item.phone === singleApp.phone));
+              if (!exists) {
+                storedList.unshift({
+                  id: 'APP-' + Date.now().toString(36).toUpperCase(),
+                  name: singleApp.name,
+                  phone: singleApp.phone || '0912-345-678',
+                  email: singleApp.email || 'caregiver@example.com',
+                  submittedAt: singleApp.submittedAt || new Date().toISOString(),
+                  status: singleApp.status || 'pending',
+                  statusLabel: '待審核',
+                  files: singleApp.files && singleApp.files.length > 0 ? singleApp.files : [
+                    { name: '良民證_線上送出.pdf', size: 1048576, type: 'police_record', uploadedAt: new Date().toISOString() }
+                  ],
+                  adminNotes: '',
+                  resubmitReason: '',
+                  reviewedBy: '',
+                  reviewedAt: '',
+                  auditTimeline: [
+                    {
+                      timestamp: singleApp.submittedAt || new Date().toISOString(),
+                      action: '前台使用者送出申請',
+                      actor: singleApp.name + ' (申請人)',
+                      detail: '自前台上傳資格文件'
+                    }
+                  ]
+                });
+                this.saveApplications(storedList);
+              }
+            }
+          }
+        } catch(e) {
+          console.warn(e);
+        }
+
+        this.applications = storedList;
+      }
+
+      getApplications() {
+        try {
+          const raw = localStorage.getItem(this.storageKey);
+          if (raw) return JSON.parse(raw);
+        } catch(e) {}
+        return this.applications || [];
+      }
+
+      saveApplications(list) {
+        this.applications = list;
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(list));
+        } catch(e) {
+          console.error('儲存失敗:', e);
+        }
+      }
+
+      bindEvents() {
+        // 跨分頁 / 跨視窗即時監聽 (Storage Event)
+        window.addEventListener('storage', (e) => {
+          if (e.key === this.storageKey || e.key === 'carecircle_caregiver_app') {
+            this.initData();
+            this.render();
+            this.showToast('🔔 收到前台最新送件更新，清單已即時刷新！');
+          }
+        });
+
+        // 搜尋
+        this.inputSearch.addEventListener('input', (e) => {
+          this.searchQuery = e.target.value.trim().toLowerCase();
+          this.renderTable();
+        });
+
+        // 排序
+        this.selectSort.addEventListener('change', (e) => {
+          this.sortBy = e.target.value;
+          this.renderTable();
+        });
+
+        // 篩選 Tabs
+        document.getElementById('filter-tabs-container').addEventListener('click', (e) => {
+          const btn = e.target.closest('.filter-tab');
+          if (!btn) return;
+          document.querySelectorAll('.filter-tab').forEach(b => {
+            b.classList.remove('active', 'bg-brand-sage', 'text-white', 'shadow-xs');
+            b.classList.add('bg-[#FAF6ED]', 'text-gray-700');
+          });
+          btn.classList.add('active', 'bg-brand-sage', 'text-white', 'shadow-xs');
+          btn.classList.remove('bg-[#FAF6ED]', 'text-gray-700');
+          this.activeFilter = btn.dataset.filter;
+          this.renderTable();
+        });
+
+        // 重新整理
+        this.btnRefresh.addEventListener('click', () => {
+          this.initData();
+          this.render();
+          this.showToast('✅ 已重新整理最新申請資料庫');
+        });
+
+        // 模擬前台送件
+        this.btnMockSubmit.addEventListener('click', () => {
+          this.handleMockNewApplication();
+        });
+
+        // 匯出 JSON
+        this.btnExport.addEventListener('click', () => {
+          this.exportDataJSON();
+        });
+
+        // 重設示範資料
+        this.btnResetSeed.addEventListener('click', () => {
+          if (confirm('確定要重設為系統預設示範資料嗎？')) {
+            const list = JSON.parse(JSON.stringify(DEFAULT_SEED_APPLICATIONS));
+            this.saveApplications(list);
+            this.render();
+            this.showToast('🔄 已重設為系統示範申請資料');
+          }
+        });
+
+        // 鎖定畫面
+        this.btnLockScreen.addEventListener('click', () => {
+          this.lockScreen();
+        });
+
+        // 解鎖按鈕
+        this.btnSubmitUnlock.addEventListener('click', () => {
+          this.handleUnlock();
+        });
+        this.btnQuickUnlock.addEventListener('click', () => {
+          this.inputAdminPin.value = '8888';
+          this.handleUnlock();
+        });
+        this.inputAdminPin.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') this.handleUnlock();
+        });
+
+        // Modal 關閉
+        this.btnCloseModal.addEventListener('click', () => this.closeReviewModal());
+        this.btnCancelModal.addEventListener('click', () => this.closeReviewModal());
+
+        // 快捷範本點擊帶入
+        document.querySelectorAll('.quick-template-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.textareaReviewNotes.value = btn.textContent.trim();
+            this.textareaReviewNotes.focus();
+          });
+        });
+
+        // 儲存審查決策
+        this.btnSaveDecision.addEventListener('click', () => {
+          this.saveReviewDecision();
+        });
+
+        // 刪除案件
+        this.btnDeleteApplication.addEventListener('click', () => {
+          this.deleteCurrentApplication();
+        });
+      }
+
+      lockScreen() {
+        this.isLocked = true;
+        this.inputAdminPin.value = '';
+        this.lockErrorHint.classList.add('hidden');
+        this.lockScreenOverlay.classList.remove('hidden');
+        this.inputAdminPin.focus();
+      }
+
+      handleUnlock() {
+        const pin = this.inputAdminPin.value.trim();
+        if (pin === '8888' || pin === 'admin' || pin === '1234') {
+          this.isLocked = false;
+          this.lockScreenOverlay.classList.add('hidden');
+          this.showToast('🔓 歡迎回來，林專員！已解鎖審查系統。');
+        } else {
+          this.lockErrorHint.classList.remove('hidden');
+          this.inputAdminPin.focus();
+        }
+      }
+
+      handleMockNewApplication() {
+        const mockNames = ['王美華', '劉建國', '郭欣怡', '許文彬', '林曉芬'];
+        const randomName = mockNames[Math.floor(Math.random() * mockNames.length)];
+        const phone = '09' + Math.floor(10000000 + Math.random() * 90000000);
+        const email = `partner.${Date.now().toString(36)}@example.com`;
+        
+        const newApp = {
+          id: 'APP-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(100 + Math.random() * 900),
+          name: randomName,
+          phone,
+          email,
+          submittedAt: new Date().toISOString(),
+          status: 'pending',
+          statusLabel: '待審核',
+          files: [
+            { name: `警察刑事紀錄證明書_${randomName}.pdf`, size: 1540000, type: 'police_record', uploadedAt: new Date().toISOString() },
+            { name: `照顧服務員結業證書_${randomName}.jpg`, size: 2100000, type: 'cert', uploadedAt: new Date().toISOString() },
+            { name: `身分證正反面.png`, size: 980000, type: 'id_card', uploadedAt: new Date().toISOString() }
+          ],
+          adminNotes: '',
+          resubmitReason: '',
+          reviewedBy: '',
+          reviewedAt: '',
+          auditTimeline: [
+            {
+              timestamp: new Date().toISOString(),
+              action: '前台送出申請 (模擬)',
+              actor: `${randomName} (申請人)`,
+              detail: '已送出良民證與照顧服務員證明'
+            }
+          ]
+        };
+
+        const list = this.getApplications();
+        list.unshift(newApp);
+        this.saveApplications(list);
+        
+        this.render();
+        this.showToast(`✨ 成功模擬前台新進案件：【${randomName}】已存入審查資料庫！`);
+      }
+
+      exportDataJSON() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.getApplications(), null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `照護夥伴申請清冊_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        this.showToast('📥 申請清冊資料已成功匯出 JSON 檔！');
+      }
+
+      render() {
+        this.renderKPI();
+        this.renderTable();
+        if (window.lucide) window.lucide.createIcons();
+      }
+
+      renderKPI() {
+        const list = this.getApplications();
+        const total = list.length;
+        const pending = list.filter(a => a.status === 'pending').length;
+        const resubmit = list.filter(a => a.status === 'require_info').length;
+        const approved = list.filter(a => a.status === 'approved').length;
+        const rejected = list.filter(a => a.status === 'rejected').length;
+
+        document.getElementById('stat-total-count').textContent = total;
+        document.getElementById('stat-pending-count').textContent = pending;
+        document.getElementById('stat-resubmit-count').textContent = resubmit;
+        document.getElementById('stat-approved-count').textContent = approved;
+        document.getElementById('stat-rejected-count').textContent = rejected;
+
+        document.getElementById('tab-count-all').textContent = total;
+        document.getElementById('tab-count-pending').textContent = pending;
+        document.getElementById('tab-count-require').textContent = resubmit;
+        document.getElementById('tab-count-approved').textContent = approved;
+        document.getElementById('tab-count-rejected').textContent = rejected;
+      }
+
+      renderTable() {
+        let list = [...this.getApplications()];
+
+        // 狀態篩選
+        if (this.activeFilter !== 'ALL') {
+          list = list.filter(a => a.status === this.activeFilter);
+        }
+
+        // 搜尋過濾
+        if (this.searchQuery) {
+          list = list.filter(a => {
+            const matchName = a.name.toLowerCase().includes(this.searchQuery);
+            const matchPhone = a.phone.includes(this.searchQuery);
+            const matchEmail = a.email.toLowerCase().includes(this.searchQuery);
+            const matchId = a.id.toLowerCase().includes(this.searchQuery);
+            const matchFiles = (a.files || []).some(f => f.name.toLowerCase().includes(this.searchQuery));
+            return matchName || matchPhone || matchEmail || matchId || matchFiles;
+          });
+        }
+
+        // 排序
+        if (this.sortBy === 'newest') {
+          list.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+        } else if (this.sortBy === 'oldest') {
+          list.sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt));
+        } else if (this.sortBy === 'status') {
+          const weight = { pending: 1, require_info: 2, approved: 3, rejected: 4 };
+          list.sort((a, b) => (weight[a.status] || 9) - (weight[b.status] || 9));
+        }
+
+        if (list.length === 0) {
+          this.tableBody.innerHTML = '';
+          this.tableEmptyState.classList.remove('hidden');
+          return;
+        }
+
+        this.tableEmptyState.classList.add('hidden');
+        this.tableBody.innerHTML = list.map(app => {
+          const statusBadge = this.getStatusBadgeHTML(app.status);
+          const filesBadge = (app.files || []).map(f => `
+            <span class="inline-flex items-center space-x-1 bg-[#FAF6ED] border border-[#E4D9C8] text-gray-700 px-2 py-0.5 rounded-md text-[11px] hover:border-brand-sage transition cursor-pointer" onclick="adminPortal.openReviewModal('${app.id}')" title="點擊檢視證件細節">
+              <span>${this.getFileIcon(f.name)}</span>
+              <span class="max-w-[140px] truncate font-medium">${f.name}</span>
+            </span>
+          `).join('');
+
+          const submitDate = new Date(app.submittedAt);
+          const dateFormatted = `${submitDate.getFullYear()}-${String(submitDate.getMonth()+1).padStart(2,'0')}-${String(submitDate.getDate()).padStart(2,'0')} ${String(submitDate.getHours()).padStart(2,'0')}:${String(submitDate.getMinutes()).padStart(2,'0')}`;
+
+          return `
+            <tr class="hover:bg-[#FAF9F5] transition group">
+              <!-- 案號 / 狀態 -->
+              <td class="py-3 px-4 align-top">
+                <div class="space-y-1">
+                  <span class="font-mono text-gray-400 text-[11px] block">${app.id}</span>
+                  <div>${statusBadge}</div>
+                </div>
+              </td>
+
+              <!-- 申請人 -->
+              <td class="py-3 px-4 align-top">
+                <div class="space-y-0.5">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="font-bold text-gray-900 text-sm">${app.name}</span>
+                    <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.2 rounded font-mono">個資查核</span>
+                  </div>
+                  <p class="text-gray-600 font-mono text-[11px]">${app.phone}</p>
+                  <p class="text-gray-400 font-mono text-[10px] truncate max-w-[190px]">${app.email}</p>
+                </div>
+              </td>
+
+              <!-- 檢附審查證件 -->
+              <td class="py-3 px-4 align-top">
+                <div class="space-y-1">
+                  <div class="flex flex-wrap gap-1">
+                    ${filesBadge || '<span class="text-gray-400 italic">無檢附檔案</span>'}
+                  </div>
+                  ${app.resubmitReason ? `
+                    <div class="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 mt-1">
+                      ⚠️ 補件備註：${app.resubmitReason}
+                    </div>
+                  ` : ''}
+                  ${app.adminNotes && app.status === 'approved' ? `
+                    <div class="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 mt-1">
+                      💬 審查備註：${app.adminNotes}
+                    </div>
+                  ` : ''}
+                </div>
+              </td>
+
+              <!-- 歷程與專員 -->
+              <td class="py-3 px-4 align-top text-gray-500 text-[11px]">
+                <div class="space-y-0.5">
+                  <div>送達：<span class="font-mono text-gray-700">${dateFormatted}</span></div>
+                  ${app.reviewedBy ? `
+                    <div class="text-[10px] text-gray-600">專員：<strong>${app.reviewedBy}</strong></div>
+                  ` : '<div class="text-[10px] text-amber-600 font-semibold">● 待分派專員查驗</div>'}
+                </div>
+              </td>
+
+              <!-- 操作功能 -->
+              <td class="py-3 px-4 align-top text-center">
+                <div class="flex items-center justify-center space-x-1">
+                  <button onclick="adminPortal.openReviewModal('${app.id}')" class="px-2.5 py-1 bg-brand-sage hover:bg-brand-sage-dark text-white rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-2xs">
+                    <i data-lucide="file-search" class="w-3 h-3"></i>
+                    <span>審查詳情</span>
+                  </button>
+
+                  ${app.status === 'pending' ? `
+                    <button onclick="adminPortal.quickApprove('${app.id}')" class="p-1 bg-[#EBF2EE] hover:bg-[#D4E5DB] text-brand-sage rounded-lg transition" title="一鍵快速核准">
+                      <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    </button>
+                  ` : ''}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        if (window.lucide) window.lucide.createIcons();
+      }
+
+      getStatusBadgeHTML(status) {
+        switch(status) {
+          case 'pending':
+            return '<span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFF2D9] text-[#8C5305] border border-[#F0D5A8]"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span><span>待審核中</span></span>';
+          case 'require_info':
+            return '<span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200"><span>⚠️ 需補件</span></span>';
+          case 'approved':
+            return '<span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EBF2EE] text-brand-sage border border-brand-sage/30"><span>✓ 審核通過</span></span>';
+          case 'rejected':
+            return '<span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200"><span>✕ 不受理</span></span>';
+          default:
+            return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">未知</span>';
+        }
+      }
+
+      getFileIcon(filename) {
+        if (!filename) return '📄';
+        const ext = filename.split('.').pop().toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) return '🖼️';
+        if (['pdf'].includes(ext)) return '📕';
+        if (['doc', 'docx'].includes(ext)) return '📘';
+        return '📄';
+      }
+
+      formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      }
+
+      openReviewModal(id) {
+        const app = this.getApplications().find(a => a.id === id);
+        if (!app) return;
+
+        this.currentEditingId = id;
+        this.modalApplicantName.textContent = app.name;
+        this.modalApplicationId.textContent = app.id;
+        this.modalStatusBadge.innerHTML = this.getStatusBadgeHTML(app.status);
+        this.modalInfoName.textContent = app.name;
+        this.modalInfoPhone.textContent = app.phone;
+        this.modalInfoEmail.textContent = app.email;
+        this.modalInfoSubmitTime.textContent = new Date(app.submittedAt).toLocaleString('zh-TW');
+
+        // 審查決策預選
+        const decisionRadio = document.querySelector(`input[name="review_decision"][value="${app.status}"]`) ||
+                              document.querySelector(`input[name="review_decision"][value="approved"]`);
+        if (decisionRadio) decisionRadio.checked = true;
+
+        this.textareaReviewNotes.value = app.resubmitReason || app.adminNotes || '';
+        this.inputReviewerName.value = app.reviewedBy || '林志豪 (資深審查專員)';
+
+        // 檔案清單渲染
+        const files = app.files || [];
+        this.modalFilesCount.textContent = files.length;
+        this.modalFilesList.innerHTML = files.map((file, idx) => `
+          <div class="flex items-center justify-between p-2.5 rounded-xl border border-[#E4D9C8] bg-[#FAF6ED] hover:bg-white hover:border-brand-sage transition cursor-pointer" onclick="adminPortal.showFilePreview('${encodeURIComponent(file.name)}', '${file.type || 'cert'}')">
+            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+              <span class="text-xl">${this.getFileIcon(file.name)}</span>
+              <div class="min-w-0 flex-1">
+                <p class="font-bold text-gray-800 text-xs truncate" title="${file.name}">${file.name}</p>
+                <p class="text-[10px] text-gray-400 font-mono">${this.formatFileSize(file.size)} · 點選預覽證件</p>
+              </div>
+            </div>
+            <span class="text-[10px] bg-white border border-[#DCD0BE] text-brand-sage font-bold px-2 py-0.5 rounded-lg shrink-0">
+              檢視檔案
+            </span>
+          </div>
+        `).join('');
+
+        // 預設展示第一個檔案之預覽
+        if (files.length > 0) {
+          this.showFilePreview(encodeURIComponent(files[0].name), files[0].type);
+        } else {
+          this.previewBoxContent.innerHTML = `<p class="text-xs text-gray-400">尚未檢附任何檔案</p>`;
+        }
+
+        // 審計時間軸
+        const timeline = app.auditTimeline || [];
+        this.modalAuditTimeline.innerHTML = timeline.map(item => `
+          <div class="py-1.5 flex items-start space-x-2">
+            <span class="text-brand-sage font-bold">●</span>
+            <div class="flex-1 space-y-0.5">
+              <div class="flex items-center justify-between text-gray-700">
+                <strong class="text-gray-900">${item.action}</strong>
+                <span class="text-[10px] text-gray-400">${new Date(item.timestamp).toLocaleString('zh-TW')}</span>
+              </div>
+              <p class="text-gray-500 text-[10px]">${item.actor}：${item.detail}</p>
+            </div>
+          </div>
+        `).join('');
+
+        this.modalReview.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+      }
+
+      showFilePreview(encodedFilename, fileType) {
+        const filename = decodeURIComponent(encodedFilename);
+        this.previewBoxTitle.textContent = `證件核驗預覽：${filename}`;
+
+        let previewHTML = '';
+        if (filename.includes('良民') || fileType === 'police_record') {
+          previewHTML = `
+            <div class="w-full max-w-md bg-white border border-gray-300 rounded-lg p-3 text-left shadow-xs space-y-2">
+              <div class="border-b border-gray-200 pb-1 flex justify-between items-center text-[10px] text-gray-500">
+                <span class="font-bold text-gray-800">警政署 警察刑事紀錄證明書 (良民證)</span>
+                <span class="text-brand-sage font-mono">核發字號：北市警刑字第1150919號</span>
+              </div>
+              <div class="text-xs space-y-1">
+                <p><strong>被證明人：</strong>${this.modalApplicantName.textContent}</p>
+                <p><strong>證明意旨：</strong>在臺灣地區查無任何刑事案件判決或重大違規紀錄，准予核發良民證明。</p>
+                <p class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                  ✓ 查驗結果：良民證真實有效，核發日期距今小於 30 日
+                </p>
+              </div>
+            </div>
+          `;
+        } else if (filename.includes('身分證') || fileType === 'id_card') {
+          previewHTML = `
+            <div class="w-full max-w-md bg-gradient-to-br from-amber-50 to-orange-50 border border-orange-200 rounded-lg p-3 text-left shadow-xs space-y-2">
+              <div class="border-b border-orange-200 pb-1 flex justify-between items-center text-[10px] text-orange-800">
+                <span class="font-bold">中華民國國民身分證 (影本影像查核)</span>
+                <span class="font-mono">發證日期：民國110年5月</span>
+              </div>
+              <div class="text-xs space-y-1 text-gray-800">
+                <p><strong>姓名：</strong>${this.modalApplicantName.textContent}</p>
+                <p><strong>身分證字號：</strong>A22****891 (末3碼已遮罩保護)</p>
+                <p class="text-[10px] text-gray-500 bg-white/70 px-2 py-0.5 rounded border border-orange-100">
+                  浮水印標註：「僅供照護圈家庭夥伴實名認證專用，他用無效」
+                </p>
+              </div>
+            </div>
+          `;
+        } else {
+          previewHTML = `
+            <div class="w-full max-w-md bg-white border border-brand-sage/30 rounded-lg p-3 text-left shadow-xs space-y-2">
+              <div class="border-b border-gray-100 pb-1 flex justify-between items-center text-[10px] text-brand-sage">
+                <span class="font-bold">衛生福利部 照顧服務員訓練結業證書</span>
+                <span class="font-mono">時數：90小時認證</span>
+              </div>
+              <div class="text-xs space-y-1 text-gray-800">
+                <p><strong>結業人員：</strong>${this.modalApplicantName.textContent}</p>
+                <p><strong>專長認證：</strong>高齡陪伴、失智引導、生活自理協助、就醫陪診</p>
+                <p class="text-[10px] text-brand-sage font-semibold">✓ 具備到府服務資格與照護圈責任險納保資格</p>
+              </div>
+            </div>
+          `;
+        }
+
+        this.previewBoxContent.innerHTML = previewHTML;
+      }
+
+      closeReviewModal() {
+        this.modalReview.classList.add('hidden');
+        this.currentEditingId = null;
+      }
+
+      saveReviewDecision() {
+        if (!this.currentEditingId) return;
+
+        const decisionRadio = document.querySelector('input[name="review_decision"]:checked');
+        if (!decisionRadio) {
+          alert('請先選擇審核決策（審核通過 / 通知補件 / 審核駁回）');
+          return;
+        }
+
+        const newStatus = decisionRadio.value;
+        const notes = this.textareaReviewNotes.value.trim();
+        const reviewer = this.inputReviewerName.value.trim() || '林志豪 (資深審查專員)';
+
+        const list = this.getApplications();
+        const idx = list.findIndex(a => a.id === this.currentEditingId);
+        if (idx === -1) return;
+
+        const app = list[idx];
+        app.status = newStatus;
+        app.statusLabel = newStatus === 'approved' ? '審核通過' : (newStatus === 'require_info' ? '待補件' : (newStatus === 'rejected' ? '已駁回' : '待審核'));
+        app.reviewedBy = reviewer;
+        app.reviewedAt = new Date().toISOString();
+
+        if (newStatus === 'require_info') {
+          app.resubmitReason = notes || '請補正良民證或身分證清晰影本';
+          app.adminNotes = notes;
+        } else if (newStatus === 'approved') {
+          app.adminNotes = notes || '審查通過，接單權限已自動開通。';
+          app.resubmitReason = '';
+        } else if (newStatus === 'rejected') {
+          app.resubmitReason = notes || '文件資格未符規定。';
+          app.adminNotes = notes;
+        }
+
+        // 追加時間軸
+        if (!app.auditTimeline) app.auditTimeline = [];
+        app.auditTimeline.push({
+          timestamp: new Date().toISOString(),
+          action: `審核決策：${app.statusLabel}`,
+          actor: reviewer,
+          detail: notes ? `備註說明：${notes}` : '完成查核程序'
+        });
+
+        // 寫入儲存
+        this.saveApplications(list);
+
+        // 同步通知更新前台使用者申請快照 (carecircle_caregiver_app)
+        try {
+          const userAppRaw = localStorage.getItem('carecircle_caregiver_app');
+          if (userAppRaw) {
+            const userApp = JSON.parse(userAppRaw);
+            if (userApp.email === app.email || userApp.name === app.name) {
+              userApp.status = newStatus;
+              userApp.statusLabel = app.statusLabel;
+              userApp.adminNotes = app.adminNotes;
+              userApp.resubmitReason = app.resubmitReason;
+              userApp.reviewedAt = app.reviewedAt;
+              userApp.reviewedBy = app.reviewedBy;
+              localStorage.setItem('carecircle_caregiver_app', JSON.stringify(userApp));
+            }
+          }
+        } catch(e) {
+          console.warn(e);
+        }
+
+        // 關閉 Modal 並更新視圖
+        this.closeReviewModal();
+        this.render();
+        this.showToast(`✅ 已成功發布審查結果！【${app.name}】狀態已更新為「${app.statusLabel}」。`);
+      }
+
+      quickApprove(id) {
+        const list = this.getApplications();
+        const app = list.find(a => a.id === id);
+        if (!app) return;
+
+        if (confirm(`確定要快速核准【${app.name}】的照護夥伴申請並開通接單資格嗎？`)) {
+          app.status = 'approved';
+          app.statusLabel = '審核通過';
+          app.reviewedBy = '林志豪 (資深審查專員)';
+          app.reviewedAt = new Date().toISOString();
+          app.adminNotes = '快速查核通過，證件完整。';
+          app.resubmitReason = '';
+
+          if (!app.auditTimeline) app.auditTimeline = [];
+          app.auditTimeline.push({
+            timestamp: new Date().toISOString(),
+            action: '快速審核通過',
+            actor: '林志豪 (資深審查專員)',
+            detail: '一鍵快速核准開通'
+          });
+
+          this.saveApplications(list);
+
+          // 同步前台單人快照
+          try {
+            const userAppRaw = localStorage.getItem('carecircle_caregiver_app');
+            if (userAppRaw) {
+              const userApp = JSON.parse(userAppRaw);
+              if (userApp.name === app.name) {
+                userApp.status = 'approved';
+                userApp.statusLabel = '審核通過';
+                userApp.adminNotes = app.adminNotes;
+                localStorage.setItem('carecircle_caregiver_app', JSON.stringify(userApp));
+              }
+            }
+          } catch(e) {}
+
+          this.render();
+          this.showToast(`🎉 已成功快速核准【${app.name}】！前台將即時開通夥伴工作台。`);
+        }
+      }
+
+      deleteCurrentApplication() {
+        if (!this.currentEditingId) return;
+        if (confirm('確定要刪除／歸檔此筆申請案件嗎？此操作將永久自後台移除。')) {
+          let list = this.getApplications().filter(a => a.id !== this.currentEditingId);
+          this.saveApplications(list);
+          this.closeReviewModal();
+          this.render();
+          this.showToast('🗑️ 已刪除該筆申請紀錄。');
+        }
+      }
+
+      showToast(msg) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'bg-[#1C2E24] text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs font-medium flex items-center space-x-2 border border-[#3A5C47] transition-all transform duration-300 opacity-0 translate-y-2';
+        toast.innerHTML = `<span>${msg}</span>`;
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+          toast.classList.remove('opacity-0', 'translate-y-2');
+        });
+
+        setTimeout(() => {
+          toast.classList.add('opacity-0', '-translate-y-2');
+          setTimeout(() => toast.remove(), 300);
+        }, 3200);
+      }
+    }
+
+    // 初始化管理者後台
+    let adminPortal;
+    document.addEventListener('DOMContentLoaded', () => {
+      adminPortal = new AdminPortal();
+      window.adminPortal = adminPortal;
+      if (window.lucide) window.lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
